@@ -55,7 +55,9 @@ def main():
     if not python.exists():
         python = Path("/usr/local/bin/jetpack-python3.6")
     cmd = [str(python), "-u", str(ROOT_DIR / "inference/worker_server.py"),
-           "--engine", str(engine), "--type", model_type, "--conf", "0.25"]
+           "--engine", str(engine), "--type", model_type,
+           "--conf", os.environ.get("SPAGHETTI_TEST_CONF", "0.25"),
+           "--backend", os.environ.get("SPAGHETTI_TEST_BACKEND", "torch")]
     env = os.environ.copy()
     env["OPENBLAS_CORETYPE"] = "ARMV8"
     client = None
