@@ -1,0 +1,22 @@
+[Unit]
+Description=Bambu Lab A1 Spaghetti Failure Detection & Print Halting Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jetson
+WorkingDirectory=/home/jetson/Spaghetti_Failure_Detection
+Environment="OPENBLAS_CORETYPE=ARMV8"
+Environment="PATH=/home/jetson/Spaghetti_Failure_Detection/api/.venv/bin:/usr/local/cuda-10.2/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/jetson/Spaghetti_Failure_Detection/api/.venv/bin/python main.py --config config.json
+Restart=on-failure
+RestartSec=5s
+
+# Resource and sandbox controls
+LimitNOFILE=65535
+KillMode=mixed
+TimeoutStopSec=10s
+
+[Install]
+WantedBy=multi-user.target

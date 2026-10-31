@@ -1,0 +1,28 @@
+{
+  "bambu_cloud": {
+    "account": "your_email@example.com",
+    "password": "your_password",
+    "region": "china"
+  },
+  "printer": {
+    "target_serial": "03900D6A1521014",
+    "printer_ip": "192.168.3.231",
+    "access_code": ""
+  },
+  "detection": {
+    "model_type": "obico",
+    "model_engine": "models/obico_spaghetti.engine",
+    "confidence_threshold": 0.35,
+    "consecutive_hits": 6,
+    "target_classes": ["spaghetti", "warping"]
+  },
+  "safety": {
+    "dry_run": true,
+    "action": "pause",
+    "cooldown_seconds": 180
+  },
+  "storage": {
+    "snapshots_dir": "snapshots",
+    "logs_dir": "logs"
+  }
+}
