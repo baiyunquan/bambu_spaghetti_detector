@@ -101,14 +101,14 @@ class SpaghettiDetectionApp:
             preexec_fn=os.setsid
         )
 
-        # Wait for socket to become available
-        for _ in range(30):
+        # Wait for socket to become available (cold loading 265MB engine on Jetson can take ~20s)
+        for _ in range(70):
             if os.path.exists(SOCKET_PATH):
                 logger.info("Inference worker socket ready!")
                 return
             time.sleep(0.5)
 
-        raise TimeoutError("Inference worker failed to create socket within 15 seconds.")
+        raise TimeoutError("Inference worker failed to create socket within 35 seconds.")
 
     def run(self):
         self.running = True
