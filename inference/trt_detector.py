@@ -9,6 +9,7 @@ import os
 from typing import List, Dict, Any, Tuple
 import tensorrt as trt
 import torch
+from model_contract import ModelContract, canonicalize_labels
 
 
 class TensorRTDetector:
@@ -34,6 +35,12 @@ class TensorRTDetector:
             self.class_names = ["error", "extrusor", "part", "spaghetti"]
         else:
             self.class_names = ["spaghetti", "warping"]
+        self.contract = None
+        if os.path.exists(engine_path + ".meta.json"):
+            self.contract = ModelContract(engine_path, self.model_type)
+            self.class_names = self.contract.canonical_labels
+        else:
+            self.class_names = canonicalize_labels(self.class_names)
 
         self.logger = trt.Logger(trt.Logger.WARNING)
         trt.init_libnvinfer_plugins(self.logger, "")
@@ -56,6 +63,8 @@ class TensorRTDetector:
         self.input_shape = None
 
         self._inspect_bindings()
+        if self.contract is not None:
+            self.contract.validate_bindings(self.input_shape, [b["shape"] for b in self.output_bindings])
 
     def _inspect_bindings(self):
         """Parse input and output bindings from engine."""

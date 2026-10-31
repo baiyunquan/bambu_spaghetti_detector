@@ -16,6 +16,11 @@ class GPUPostProcessor:
         self.iou_thresh = iou_thresh
         self.device = torch.device(device)
 
+    @staticmethod
+    def _validate_outputs(outputs):
+        if any(not bool(torch.isfinite(output).all()) for output in outputs):
+            raise ValueError("Non-finite model output")
+
     def process_obico(self, raw_outputs: List[torch.Tensor], meta: Dict[str, Any], class_names: List[str] = None) -> List[Dict[str, Any]]:
         """
         Post-process Obico model output tensors on GPU.
@@ -23,6 +28,7 @@ class GPUPostProcessor:
           - boxes: [1, N, 1, 4] (normalized [x1, y1, x2, y2] in [0, 1])
           - confs: [1, N, 1] (class confidence in [0, 1])
         """
+        self._validate_outputs(raw_outputs)
         boxes_tensor, confs_tensor = raw_outputs[0], raw_outputs[1]
         if class_names is None:
             class_names = ["spaghetti"]
@@ -86,6 +92,7 @@ class GPUPostProcessor:
         Post-process YOLOv8 model output tensor on GPU.
         output0: [1, 4 + num_classes, num_anchors] (e.g. [1, 6, 8400])
         """
+        self._validate_outputs(raw_outputs)
         if class_names is None:
             class_names = ["spaghetti", "warping"]
 
@@ -155,6 +162,7 @@ class GPUPostProcessor:
         output0: [1, num_anchors, 5 + num_classes] (e.g. [1, 10647, 9])
         Columns: [cx, cy, w, h, obj_conf, cls0, cls1, ...]
         """
+        self._validate_outputs(raw_outputs)
         if class_names is None:
             class_names = ["error", "extrusor", "part", "spaghetti"]
 
