@@ -51,7 +51,8 @@ The system abstracts a unified `TensorRTDetector` interface to support hot-swapp
        ```
      - **FP16 Optimization Rule**: FP16 provides ~2x speedup on Jetson Nano Maxwell GPU. INT8 is strictly avoided as Maxwell lacks INT8 Tensor Cores and causes accuracy degradation without speedup.
 3. **GPU-Accelerated Post-Processing (NMS)**:
-   - For models whose ONNX does not bundle `EfficientNMS_TRT`, post-processing must use PyTorch CUDA tensors and `torchvision.ops.nms` on GPU to avoid slow Python CPU loops on the Cortex-A57 CPU.
+   - NMS must execute on GPU, using native CUDA, a validated TensorRT plugin, or the explicit legacy PyTorch/torchvision backend. The native_cuda backend must not import torch/torchvision or load libtorch.
+   - Preserve per-class NMS and all valid candidates; plugin top-k limits must not silently truncate YOLO outputs. Keep raw model class IDs and only canonicalize explicitly known failure labels.
 
 ---
 
