@@ -90,6 +90,14 @@ class A1VideoStream:
 
         return image_data
 
+    def _close_socket(self):
+        if self.socket:
+            try:
+                self.socket.close()
+            except Exception:
+                pass
+            self.socket = None
+
     def stream_frames(self) -> Generator[bytes, None, None]:
         """Continuously yields frames, automatically reconnecting on network errors."""
         self._running = True
@@ -106,16 +114,13 @@ class A1VideoStream:
                     yield frame
 
             except Exception as e:
+                if not self._running:
+                    break
                 logger.warning(f"Video stream error: {e}. Reconnecting in {backoff}s...")
-                self.disconnect()
+                self._close_socket()
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 30)
 
     def disconnect(self):
         self._running = False
-        if self.socket:
-            try:
-                self.socket.close()
-            except Exception:
-                pass
-            self.socket = None
+        self._close_socket()

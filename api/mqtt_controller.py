@@ -26,9 +26,11 @@ class A1MQTTController:
         self.gcode_state: str = "UNKNOWN"  # RUNNING, PAUSE, IDLE, FINISH, etc.
         self.current_layer: int = 0
         self.progress_percent: int = 0
-        self.is_connected = False
-
-        self.client = mqtt.Client(client_id=f"spaghetti_detector_{int(time.time())}")
+        client_id = f"spaghetti_detector_{int(time.time())}"
+        if hasattr(mqtt, "CallbackAPIVersion"):
+            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
+        else:
+            self.client = mqtt.Client(client_id=client_id)
         self._setup_client()
 
     def _setup_client(self):
