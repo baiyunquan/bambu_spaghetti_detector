@@ -241,6 +241,7 @@ class SpaghettiDetectionApp:
                     detections = ipc_client.detect(jpeg_frame)
                 except Exception as e:
                     logger.error(f"Inference error: {e}")
+                    decision_engine.invalidate_frame()
                     continue
                 dt_ms = (time.time() - t0) * 1000.0
 

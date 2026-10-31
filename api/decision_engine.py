@@ -34,6 +34,14 @@ class DecisionEngine:
         self.total_frames_processed = 0
         self.total_failures_detected = 0
 
+    def invalidate_frame(self):
+        """Break consecutive evidence when a frame could not be evaluated."""
+        logger.warning(
+            "Invalid inference frame. Resetting consecutive hits from %s to 0.",
+            self.consecutive_hits,
+        )
+        self.consecutive_hits = 0
+
     def evaluate_frame(
         self,
         detections: List[Dict[str, Any]],
