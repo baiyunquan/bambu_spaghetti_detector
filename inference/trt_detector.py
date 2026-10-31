@@ -25,6 +25,7 @@ class TensorRTDetector:
             raise FileNotFoundError(f"TensorRT engine not found at: {engine_path}")
 
         self.engine_path = engine_path
+        self.model_type = model_type.lower()
         if class_names:
             self.class_names = class_names
         elif self.model_type == "obico":
