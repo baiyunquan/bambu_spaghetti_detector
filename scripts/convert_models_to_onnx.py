@@ -116,23 +116,30 @@ def convert_yolov5(imgsz: int = 640):
     pt_path = WEIGHTS_DIR / "yolov5_failure.pt"
     download_file(YOLOV5_PT_URL, pt_path, "YOLOv5 weights (model_torch.pt)")
 
-    from ultralytics import YOLO
     import shutil
+    import subprocess
 
-    print(f"[INFO] Loading YOLOv5 model via Ultralytics from {pt_path}...")
-    model = YOLO(str(pt_path))
-    print(f"[INFO] Model classes: {model.names}")
+    hub_export = Path.home() / ".cache" / "torch" / "hub" / "ultralytics_yolov5_master" / "export.py"
+    if not hub_export.exists():
+        import torch
+        print("[INFO] Fetching ultralytics/yolov5 from torch.hub...")
+        torch.hub.load("ultralytics/yolov5", "custom", path=str(pt_path), trust_repo=True)
 
-    print(f"[INFO] Exporting to ONNX format (opset 11, fixed shape {imgsz}x{imgsz}, simplified)...")
-    exported_path = model.export(
-        format="onnx",
-        opset=11,
-        imgsz=imgsz,
-        simplify=True,
-        dynamic=False
-    )
+    print(f"[INFO] Exporting YOLOv5 to ONNX (imgsz={imgsz}, opset 11, simplified)...")
+    cmd = [
+        sys.executable,
+        str(hub_export),
+        "--weights", str(pt_path),
+        "--include", "onnx",
+        "--imgsz", str(imgsz), str(imgsz),
+        "--opset", "11",
+        "--simplify"
+    ]
+    subprocess.run(cmd, check=True)
+
+    exported_onnx = pt_path.with_suffix(".onnx")
     dest_onnx = MODELS_DIR / f"yolov5_failure_{imgsz}.onnx"
-    shutil.move(exported_path, dest_onnx)
+    shutil.move(exported_onnx, dest_onnx)
     print(f"[SUCCESS] Exported YOLOv5 ONNX model to: {dest_onnx}")
     return dest_onnx
 
