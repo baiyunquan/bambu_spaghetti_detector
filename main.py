@@ -213,19 +213,23 @@ class SpaghettiDetectionApp:
         print("=" * 65 + "\n")
 
         # 7. Main Monitoring Loop
+        frame_idx = 0
         try:
             for jpeg_frame in video_stream.stream_frames():
                 if not self.running:
                     break
 
+                frame_idx += 1
                 current_state = mqtt_controller.gcode_state
 
                 # Send frame to GPU TensorRT Worker
+                t0 = time.time()
                 try:
                     detections = ipc_client.detect(jpeg_frame)
                 except Exception as e:
                     logger.error(f"Inference error: {e}")
                     continue
+                dt_ms = (time.time() - t0) * 1000.0
 
                 # Decision state machine evaluation
                 eval_res = decision_engine.evaluate_frame(detections, current_state)
@@ -236,7 +240,7 @@ class SpaghettiDetectionApp:
                 conf = eval_res["highest_confidence"]
                 status_symbol = "🔴" if hits > 0 else "🟢"
                 print(
-                    f"\r{status_symbol} [STATE: {current_state}] [Hits: {hits}/{req}] [Max Conf: {conf:.2f}] [Detections: {len(detections)}]   ",
+                    f"\r{status_symbol} [Frame #{frame_idx}] [{dt_ms:.1f}ms] [STATE: {current_state}] [Hits: {hits}/{req}] [Max Conf: {conf:.2f}] [Dets: {len(detections)}]   ",
                     end="",
                     flush=True
                 )

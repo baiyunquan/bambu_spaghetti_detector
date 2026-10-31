@@ -29,7 +29,7 @@ class A1VideoStream:
 
     def connect(self):
         """Establish TLS TCP connection to port 6000 and authenticate."""
-        self.disconnect()
+        self._close_socket()
         logger.info(f"Connecting to A1 video stream at {self.printer_ip}:{self.port} (TLS)...")
 
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
