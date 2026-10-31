@@ -58,24 +58,24 @@ class BambuAuth:
         resp.raise_for_status()
         data = resp.json()
 
-        if data.get("success"):
-            token = data.get("accessToken")
+        token = data.get("accessToken")
+        if token or data.get("success"):
             self._save_token(token)
             logger.info("Authentication successful!")
             return token
 
         if data.get("loginType") == "verifyCode":
-            logger.warning("Bambu Cloud requested 2FA Email verification.")
+            logger.warning("Bambu Cloud requested 2FA verification.")
             requests.post(f"{self.base_url}/v1/user-service/user/sendemail", json={"email": username, "type": "login"}, headers=headers)
-            code = input("Enter 6-digit verification code sent to your email: ").strip()
+            code = input("Enter verification code: ").strip()
             v_payload = {"account": username, "code": code}
             v_resp = requests.post(url, json=v_payload, headers=headers, timeout=15)
             v_data = v_resp.json()
-            if v_data.get("success"):
-                token = v_data.get("accessToken")
-                self._save_token(token)
+            v_token = v_data.get("accessToken")
+            if v_token or v_data.get("success"):
+                self._save_token(v_token)
                 logger.info("2FA Verification successful!")
-                return token
+                return v_token
             raise RuntimeError(f"2FA verification failed: {v_data}")
 
         raise RuntimeError(f"Login failed: {data.get('message', data)}")

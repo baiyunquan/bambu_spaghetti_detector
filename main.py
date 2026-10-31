@@ -137,11 +137,22 @@ class SpaghettiDetectionApp:
         region = cloud_cfg.get("region", "china")
 
         if not access_code:
-            if not account or not password:
-                raise ValueError("Must provide either 'access_code' or Bambu Cloud 'account'/'password' in config.json")
             auth = BambuAuth(region=region)
-            auth.login(account, password)
-            creds = auth.get_a1_credentials(target_serial=target_serial)
+            creds = None
+            if auth.token:
+                try:
+                    logger.info("Using cached Bambu Cloud token...")
+                    creds = auth.get_a1_credentials(target_serial=target_serial)
+                except Exception as e:
+                    logger.warning(f"Cached token invalid ({e}). Requesting login...")
+                    creds = None
+
+            if not creds:
+                if not account or not password:
+                    raise ValueError("Must provide either 'access_code' or Bambu Cloud 'account'/'password' in config.json")
+                auth.login(account, password)
+                creds = auth.get_a1_credentials(target_serial=target_serial)
+
             access_code = creds["access_code"]
             logger.info(f"Retrieved Access Code for A1 from Cloud: {access_code}")
 

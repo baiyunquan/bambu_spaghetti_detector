@@ -52,23 +52,22 @@ def main():
         print(f"[ERROR] Failed to reach login endpoint: {e}")
         return 1
 
-    token = None
-    if data.get("success"):
-        token = data.get("accessToken")
+    token = data.get("accessToken")
+    if token or data.get("success"):
+        pass
     elif data.get("loginType") == "verifyCode":
-        print("[INFO] 2FA Email verification required.")
+        print("[INFO] 2FA verification required.")
         # Trigger sending verification code
         send_resp = session.post(f"{base_url}/v1/user-service/user/sendemail", json={"email": username, "type": "login"}, headers=headers)
-        code = input("Please enter the verification code sent to your email: ").strip()
+        code = input("Please enter the verification code: ").strip()
         verify_payload = {
             "account": username,
             "code": code,
         }
         v_resp = session.post(f"{base_url}/v1/user-service/user/login", json=verify_payload, headers=headers)
         v_data = v_resp.json()
-        if v_data.get("success"):
-            token = v_data.get("accessToken")
-        else:
+        token = v_data.get("accessToken")
+        if not (token or v_data.get("success")):
             print(f"[ERROR] Verification failed: {v_data}")
             return 1
     else:
