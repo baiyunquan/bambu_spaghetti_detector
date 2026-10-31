@@ -41,11 +41,21 @@ def main():
         image.save(buf, format="JPEG", quality=85)
         jpeg_bytes = buf.getvalue()
 
+    model_type = os.environ.get("SPAGHETTI_TEST_TYPE")
+    if not model_type:
+        name = engine.name.lower()
+        if "yolov5" in name:
+            model_type = "yolov5"
+        elif "yolov8" in name:
+            model_type = "yolov8"
+        else:
+            model_type = "obico"
+
     python = ROOT_DIR / "inference/.venv-jetpack/bin/python"
     if not python.exists():
         python = Path("/usr/local/bin/jetpack-python3.6")
     cmd = [str(python), "-u", str(ROOT_DIR / "inference/worker_server.py"),
-           "--engine", str(engine), "--type", "obico", "--conf", "0.25"]
+           "--engine", str(engine), "--type", model_type, "--conf", "0.25"]
     env = os.environ.copy()
     env["OPENBLAS_CORETYPE"] = "ARMV8"
     client = None

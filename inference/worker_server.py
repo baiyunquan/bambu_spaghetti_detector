@@ -47,7 +47,9 @@ def detect_frame(detector, preprocessor, postprocessor, model_type, jpeg_bytes):
     outputs = detector.infer(tensor)
     if model_type == "obico":
         return postprocessor.process_obico(outputs, meta, detector.class_names)
-    return postprocessor.process_yolo(outputs, meta, detector.class_names)
+    elif model_type == "yolov5":
+        return postprocessor.process_yolov5(outputs, meta, detector.class_names)
+    return postprocessor.process_yolov8(outputs, meta, detector.class_names)
 
 
 def warmup_pipeline(detector, preprocessor, postprocessor, model_type):
@@ -78,12 +80,19 @@ def warmup_pipeline(detector, preprocessor, postprocessor, model_type):
                                [[0.12, 0.12, 0.48, 0.48]]]], device=device)
         scores = torch.ones((1, 2, 1), device=device)
         postprocessor.process_obico([boxes, scores], meta, detector.class_names)
+    elif model_type == "yolov5":
+        dummy = torch.zeros((1, 2, 5 + len(detector.class_names)), device=device)
+        dummy[0, :, :4] = torch.tensor([[100., 100., 50., 50.], [102., 102., 50., 50.]], device=device)
+        dummy[0, :, 4] = 1.0
+        spag_idx = detector.class_names.index("spaghetti") if "spaghetti" in detector.class_names else 0
+        dummy[0, :, 5 + spag_idx] = 1.0
+        postprocessor.process_yolov5([dummy], meta, detector.class_names)
     else:
         outputs = torch.zeros((1, 4 + len(detector.class_names), 2), device=device)
         outputs[0, :4, :] = torch.tensor([[100., 102.], [100., 102.],
                                          [50., 50.], [50., 50.]], device=device)
         outputs[0, 4, :] = 1.0
-        postprocessor.process_yolo([outputs], meta, detector.class_names)
+        postprocessor.process_yolov8([outputs], meta, detector.class_names)
     if tensor.is_cuda:
         torch.cuda.synchronize(device)
 

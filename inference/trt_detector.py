@@ -25,8 +25,14 @@ class TensorRTDetector:
             raise FileNotFoundError(f"TensorRT engine not found at: {engine_path}")
 
         self.engine_path = engine_path
-        self.model_type = model_type.lower()
-        self.class_names = class_names or (["spaghetti"] if self.model_type == "obico" else ["spaghetti", "warping"])
+        if class_names:
+            self.class_names = class_names
+        elif self.model_type == "obico":
+            self.class_names = ["spaghetti"]
+        elif self.model_type == "yolov5":
+            self.class_names = ["error", "extrusor", "part", "spaghetti"]
+        else:
+            self.class_names = ["spaghetti", "warping"]
 
         self.logger = trt.Logger(trt.Logger.WARNING)
         trt.init_libnvinfer_plugins(self.logger, "")

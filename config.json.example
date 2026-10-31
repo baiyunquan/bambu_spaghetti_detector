@@ -10,11 +10,11 @@
     "access_code": ""
   },
   "detection": {
-    "model_type": "obico",
-    "model_engine": "models/obico_spaghetti.engine",
-    "confidence_threshold": 0.35,
+    "model_type": "yolov5",
+    "model_engine": "models/yolov5_failure_416.engine",
+    "confidence_threshold": 0.30,
     "consecutive_hits": 6,
-    "target_classes": ["spaghetti", "warping"]
+    "target_classes": ["spaghetti", "error"]
   },
   "safety": {
     "dry_run": true,

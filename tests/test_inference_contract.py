@@ -50,14 +50,21 @@ class TestFullPipelineWarmup(unittest.TestCase):
         class FixedDetector:
             def __init__(self, model_type):
                 self.model_type = model_type
-                self.class_names = ["spaghetti"] if model_type == "obico" else ["spaghetti", "warping"]
+                if model_type == "obico":
+                    self.class_names = ["spaghetti"]
+                elif model_type == "yolov5":
+                    self.class_names = ["error", "extrusor", "part", "spaghetti"]
+                else:
+                    self.class_names = ["spaghetti", "warping"]
 
             def infer(self, tensor):
                 # Real models may have no candidates during warmup. The worker
                 # must still prewarm the nonempty NMS/coordinate path.
-                if self.model_type != "obico":
-                    return [torch.zeros((1, 6, 1))]
-                return [torch.tensor([[[[0., 0., 1., 1.]]]]), torch.zeros((1, 1, 1))]
+                if self.model_type == "obico":
+                    return [torch.tensor([[[[0., 0., 1., 1.]]]]), torch.zeros((1, 1, 1))]
+                elif self.model_type == "yolov5":
+                    return [torch.zeros((1, 1, 9))]
+                return [torch.zeros((1, 6, 1))]
 
         class ObservedPreprocessor(GPUPreprocessor):
             def __init__(self):
@@ -81,12 +88,22 @@ class TestFullPipelineWarmup(unittest.TestCase):
                 self.results.extend(result)
                 return result
 
+            def process_yolov5(self, outputs, meta, class_names):
+                result = super().process_yolov5(outputs, meta, class_names)
+                self.results.extend(result)
+                return result
+
+            def process_yolov8(self, outputs, meta, class_names):
+                result = super().process_yolov8(outputs, meta, class_names)
+                self.results.extend(result)
+                return result
+
             def process_yolo(self, outputs, meta, class_names):
                 result = super().process_yolo(outputs, meta, class_names)
                 self.results.extend(result)
                 return result
 
-        for model_type in ("obico", "yolov8"):
+        for model_type in ("obico", "yolov8", "yolov5"):
             with self.subTest(model_type=model_type):
                 pre = ObservedPreprocessor()
                 post = ObservedPostprocessor()
