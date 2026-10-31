@@ -105,3 +105,14 @@ The Bambu Lab A1 camera produces ~0.5 to 2 FPS (1280x720 JPEG frames):
 3. **Forensic Evidence & Logging**:
    - When a pause is triggered, render bounding boxes and confidence scores on the current frame and save to `snapshots/failure_YYYYMMDD_HHMMSS.jpg`.
    - Output detailed decision logs (consecutive hit count, highest confidence, timestamp) to console and log files.
+
+---
+
+## 6. Development Workflow, Git Discipline & Autonomous Execution
+
+1. **Prompt, Atomic Git Commits**:
+   - Commit code changes promptly and incrementally in small, self-contained, atomic units as each feature, fix, or test is verified.
+   - Strictly avoid lumping unrelated changes, multi-module refactors, or modifications originating from different agents/tools into a single ambiguous batch commit.
+2. **Autonomous Execution & Decisive Proactivity**:
+   - Act decisively and execute necessary operations (e.g., building engines, running tests, committing code, switching configurations, downloading datasets) proactively without constantly pausing to ask the user for routine permission or confirmation.
+   - When a clear technical path or instruction is given, execute the full cycle end-to-end and report concrete results directly.
