@@ -14,6 +14,7 @@ import json
 import signal
 import logging
 import argparse
+import socket
 import subprocess
 from pathlib import Path
 
@@ -61,8 +62,19 @@ class SpaghettiDetectionApp:
     def _ensure_worker_running(self):
         """Starts the JetPack Python 3.6 GPU Inference Worker if socket is not active."""
         if os.path.exists(SOCKET_PATH):
-            logger.info(f"Existing inference socket found at {SOCKET_PATH}. Reusing worker.")
-            return
+            try:
+                test_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                test_sock.settimeout(1.0)
+                test_sock.connect(SOCKET_PATH)
+                test_sock.close()
+                logger.info(f"Existing inference socket active at {SOCKET_PATH}. Reusing worker.")
+                return
+            except (socket.error, ConnectionRefusedError):
+                logger.info(f"Purging stale socket file at {SOCKET_PATH}...")
+                try:
+                    os.remove(SOCKET_PATH)
+                except OSError:
+                    pass
 
         jetpack_python = BASE_DIR / "inference" / ".venv-jetpack" / "bin" / "python"
         worker_script = BASE_DIR / "inference" / "worker_server.py"
