@@ -26,6 +26,7 @@ class A1MQTTController:
         self.gcode_state: str = "UNKNOWN"  # RUNNING, PAUSE, IDLE, FINISH, etc.
         self.current_layer: int = 0
         self.progress_percent: int = 0
+        self.is_connected = False
         client_id = f"spaghetti_detector_{int(time.time())}"
         if hasattr(mqtt, "CallbackAPIVersion"):
             self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
@@ -84,8 +85,11 @@ class A1MQTTController:
 
     def stop(self):
         """Stops MQTT client loop and disconnects."""
+        try:
+            self.client.disconnect()
+        except Exception:
+            pass
         self.client.loop_stop()
-        self.client.disconnect()
         self.is_connected = False
 
     def send_command(self, command_dict: dict) -> bool:
