@@ -10,11 +10,12 @@
     "access_code": ""
   },
   "detection": {
+    "backend": "torch",
     "model_type": "yolov5",
     "model_engine": "models/yolov5_failure_416.engine",
     "confidence_threshold": 0.30,
     "consecutive_hits": 6,
-    "target_classes": ["spaghetti", "error"]
+    "target_classes": ["spaghetti", "warping"]
   },
   "safety": {
     "dry_run": true,

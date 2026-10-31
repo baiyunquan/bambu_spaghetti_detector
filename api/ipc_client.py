@@ -67,7 +67,7 @@ class InferenceClient:
 
             if result.get("status") != "ok":
                 logger.error(f"Inference worker returned error: {result.get('error')}")
-                return []
+                raise RuntimeError("Inference worker returned error: {}".format(result.get("error", "unknown error")))
 
             return result.get("detections", [])
 

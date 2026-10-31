@@ -61,20 +61,21 @@ class SpaghettiDetectionApp:
 
     def _ensure_worker_running(self):
         """Starts the JetPack Python 3.6 GPU Inference Worker if socket is not active."""
+        det_cfg = self.config.get("detection", {})
+        backend = det_cfg.get("backend", "torch")
+        if backend not in ("torch", "native_cuda"):
+            raise ValueError("Unsupported inference backend: {}".format(backend))
         if os.path.exists(SOCKET_PATH):
             try:
-                test_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                test_sock.settimeout(1.0)
-                test_sock.connect(SOCKET_PATH)
-                test_sock.close()
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as test_sock:
+                    test_sock.settimeout(1.0)
+                    test_sock.connect(SOCKET_PATH)
                 logger.info(f"Existing inference socket active at {SOCKET_PATH}. Reusing worker.")
                 return
             except (socket.error, ConnectionRefusedError):
-                logger.info(f"Purging stale socket file at {SOCKET_PATH}...")
-                try:
-                    os.remove(SOCKET_PATH)
-                except OSError:
-                    pass
+                # Only the worker may remove a stale socket after checking its
+                # type, listener status, and inode. Never unlink arbitrary paths.
+                logger.info(f"Existing socket unavailable at {SOCKET_PATH}; worker will check it safely.")
 
         jetpack_python = BASE_DIR / "inference" / ".venv-jetpack" / "bin" / "python"
         worker_script = BASE_DIR / "inference" / "worker_server.py"
@@ -83,7 +84,6 @@ class SpaghettiDetectionApp:
             # Fallback to system jetpack-python3.6
             jetpack_python = "/usr/local/bin/jetpack-python3.6"
 
-        det_cfg = self.config.get("detection", {})
         engine_file = BASE_DIR / det_cfg.get("model_engine", "models/obico_spaghetti.engine")
         model_type = det_cfg.get("model_type", "obico")
         conf_thresh = det_cfg.get("confidence_threshold", 0.35)
@@ -98,7 +98,8 @@ class SpaghettiDetectionApp:
             str(worker_script),
             "--engine", str(engine_file),
             "--type", model_type,
-            "--conf", str(conf_thresh)
+            "--conf", str(conf_thresh),
+            "--backend", backend
         ]
 
         logger.info(f"Spawning GPU Inference Worker process: {' '.join(cmd)}")
