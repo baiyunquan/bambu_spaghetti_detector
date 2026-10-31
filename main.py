@@ -113,14 +113,26 @@ class SpaghettiDetectionApp:
             preexec_fn=os.setsid
         )
 
-        # Wait for socket to become available (cold loading 265MB engine on Jetson takes ~30s)
-        for _ in range(120):
+        # Loading the engine and prewarming JPEG/CUDA/NMS can exceed 60 seconds
+        # under memory pressure. This is separate from the per-frame IPC timeout.
+        deadline = time.monotonic() + 120.0
+        while time.monotonic() < deadline:
+            if self.worker_process.poll() is not None:
+                raise RuntimeError("Inference worker exited during startup (code {}).".format(
+                    self.worker_process.returncode))
             if os.path.exists(SOCKET_PATH):
-                logger.info("Inference worker socket ready!")
-                return
+                try:
+                    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as ready_sock:
+                        ready_sock.settimeout(0.5)
+                        ready_sock.connect(SOCKET_PATH)
+                    logger.info("Inference worker ready after full pipeline warmup!")
+                    return
+                except OSError:
+                    pass
             time.sleep(0.5)
 
-        raise TimeoutError("Inference worker failed to create socket within 60 seconds.")
+        self.stop()
+        raise TimeoutError("Inference worker failed to become ready within 120 seconds.")
 
     def run(self):
         self.running = True

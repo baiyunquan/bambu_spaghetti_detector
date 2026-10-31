@@ -41,6 +41,53 @@ def recv_exact(sock, num_bytes: int) -> bytes:
     return bytes(data)
 
 
+def detect_frame(detector, preprocessor, postprocessor, model_type, jpeg_bytes):
+    """Use the same complete path for startup warmup and client requests."""
+    tensor, meta = preprocessor.decode_and_preprocess(jpeg_bytes)
+    outputs = detector.infer(tensor)
+    if model_type == "obico":
+        return postprocessor.process_obico(outputs, meta, detector.class_names)
+    return postprocessor.process_yolo(outputs, meta, detector.class_names)
+
+
+def warmup_pipeline(detector, preprocessor, postprocessor, model_type):
+    """Finish lazy image/CUDA/NMS initialization before publishing readiness."""
+    import cv2
+    import numpy as np
+    import torch
+
+    # Cover nominal 720p and the actual A1's 1536x1080 stream. The latter
+    # triggers a different OpenCV resize/thread-pool path on this Jetson;
+    # prewarming only 720p still leaves a multi-second first real request.
+    for source_h, source_w in ((720, 1280), (1080, 1536)):
+        image = np.random.RandomState(0).randint(0, 256, (source_h, source_w, 3), dtype=np.uint8)
+        ok, encoded = cv2.imencode(".jpg", image)
+        if not ok:
+            raise RuntimeError("Failed to encode warmup JPEG")
+        jpeg_bytes = encoded.tobytes()
+        del image, encoded
+        for _ in range(3):
+            detect_frame(detector, preprocessor, postprocessor, model_type, jpeg_bytes)
+
+    # The model may return no candidates for the warmup image. Force the full
+    # nonempty GPU NMS + coordinate conversion path without affecting decisions.
+    tensor, meta = preprocessor.decode_and_preprocess(jpeg_bytes)
+    device = tensor.device
+    if model_type == "obico":
+        boxes = torch.tensor([[[[0.1, 0.1, 0.5, 0.5]],
+                               [[0.12, 0.12, 0.48, 0.48]]]], device=device)
+        scores = torch.ones((1, 2, 1), device=device)
+        postprocessor.process_obico([boxes, scores], meta, detector.class_names)
+    else:
+        outputs = torch.zeros((1, 4 + len(detector.class_names), 2), device=device)
+        outputs[0, :4, :] = torch.tensor([[100., 102.], [100., 102.],
+                                         [50., 50.], [50., 50.]], device=device)
+        outputs[0, 4, :] = 1.0
+        postprocessor.process_yolo([outputs], meta, detector.class_names)
+    if tensor.is_cuda:
+        torch.cuda.synchronize(device)
+
+
 def run_worker(engine_path: str, model_type: str = "obico", conf_thresh: float = 0.35, iou_thresh: float = 0.45):
     print("=" * 60)
     print(f" [INFO] Starting Spaghetti TensorRT Worker Daemon")
@@ -65,19 +112,15 @@ def run_worker(engine_path: str, model_type: str = "obico", conf_thresh: float =
     preprocessor = GPUPreprocessor(target_size=(input_h, input_w))
     postprocessor = GPUPostProcessor(conf_thresh=conf_thresh, iou_thresh=iou_thresh)
 
-    # Warmup engine
-    print("[INFO] Warming up TensorRT engine on GPU...")
-    import torch
-    dummy_input = torch.zeros((1, 3, input_h, input_w), dtype=torch.float32, device="cuda:0")
-    for _ in range(3):
-        detector.infer(dummy_input)
-    print("[INFO] Warmup complete. Listening for connections...")
+    print("[INFO] Warming up JPEG preprocessing, TensorRT and GPU NMS...", flush=True)
+    warmup_pipeline(detector, preprocessor, postprocessor, model_type)
 
     # Bind UDS socket
     server_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server_sock.bind(SOCKET_PATH)
     server_sock.listen(5)
     os.chmod(SOCKET_PATH, 0o777)
+    print("[INFO] Full pipeline warmup complete. Listening for connections...", flush=True)
 
     try:
         while True:
@@ -97,17 +140,8 @@ def run_worker(engine_path: str, model_type: str = "obico", conf_thresh: float =
 
                     t0 = time.time()
                     try:
-                        # 3. GPU Preprocess
-                        tensor, meta = preprocessor.decode_and_preprocess(jpeg_bytes)
-
-                        # 4. TensorRT Inference
-                        outputs = detector.infer(tensor)
-
-                        # 5. GPU NMS Postprocess
-                        if model_type == "obico":
-                            detections = postprocessor.process_obico(outputs, meta, detector.class_names)
-                        else:
-                            detections = postprocessor.process_yolo(outputs, meta, detector.class_names)
+                        detections = detect_frame(
+                            detector, preprocessor, postprocessor, model_type, jpeg_bytes)
 
                         inference_time = (time.time() - t0) * 1000.0
                         response = {

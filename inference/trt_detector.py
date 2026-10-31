@@ -105,8 +105,19 @@ class TensorRTDetector:
         Returns:
             List of output PyTorch CUDA tensors.
         """
+        if tuple(input_tensor.shape) != self.input_shape:
+            raise ValueError("Input shape {} does not match engine {}".format(
+                tuple(input_tensor.shape), self.input_shape))
+        expected_dtype = self.input_bindings[0]["dtype"]
+        if input_tensor.dtype != expected_dtype:
+            raise ValueError("Input dtype {} does not match engine {}".format(
+                input_tensor.dtype, expected_dtype))
+
         if not input_tensor.is_cuda:
             input_tensor = input_tensor.cuda()
+        # Callers other than GPUPreprocessor may supply a strided view. TRT's
+        # linear input binding cannot interpret its strides.
+        input_tensor = input_tensor.contiguous()
 
         # Allocate output GPU tensors
         output_tensors = []

@@ -75,7 +75,9 @@ class GPUPreprocessor:
         # Permute HWC -> CHW
         tensor = tensor.permute(2, 0, 1).unsqueeze(0)
         # Normalize to [0.0, 1.0]
-        tensor = tensor.float().div_(255.0)
+        # TensorRT receives only a data pointer, not PyTorch strides. Materialize
+        # planar NCHW storage before exposing that pointer to a linear binding.
+        tensor = tensor.contiguous().float().div_(255.0)
 
         meta = {
             "orig_h": orig_h,
