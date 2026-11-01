@@ -11,8 +11,7 @@ from .detector import TensorRTDetector
 class NativePipeline:
     def __init__(self,engine_path,model_type,conf_thresh=.35,iou_thresh=.45):
         self.rt=Runtime()
-        self.stream=cv2.cuda_Stream()
-        self.rt.stream=int(self.stream.cudaPtr())
+        self.stream=self.rt.stream
         self.detector=self.pre=self.post=None
         try:
             self.detector=TensorRTDetector(self.rt,engine_path,model_type)

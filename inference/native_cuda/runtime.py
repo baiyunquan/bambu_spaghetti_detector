@@ -19,40 +19,47 @@ class DeviceTensor:
 
 class DeviceBuffer(DeviceTensor):
     def __init__(self, runtime, shape, dtype):
-        ptr = C.c_void_p()
+        ptr = C.c_uint64()
+        shape = tuple(int(n) for n in shape)
+        if not shape or any(n <= 0 for n in shape):
+            raise ValueError("Invalid allocation dimensions")
         size = int(np.prod(shape)) * np.dtype(dtype).itemsize
-        runtime.check(runtime.lib.cudaMalloc(C.byref(ptr), size))
+        runtime.driver_check(runtime.driver.cuMemAlloc_v2(C.byref(ptr), size))
         super().__init__(ptr.value, shape, dtype, runtime)
         runtime.buffers.add(self)
 
     def close(self):
         if self.ptr:
-            self.owner.check(self.owner.lib.cudaFree(C.c_void_p(self.ptr)))
+            self.owner.driver_check(self.owner.driver.cuMemFree_v2(self.ptr))
             self.ptr = 0
             self.owner.buffers.discard(self)
 
 
 class Runtime:
     def __init__(self):
-        self.lib = C.CDLL("/usr/local/cuda/lib64/libcudart.so")
         self.driver = C.CDLL("libcuda.so.1")
         self.buffers = set()
         self.modules = []
         self.kernel_modules = {}
         self.stream = 0
-        for name, args, restype in [
-            ("cudaSetDevice", [C.c_int], C.c_int),
-            ("cudaMalloc", [C.POINTER(C.c_void_p), C.c_size_t], C.c_int),
-            ("cudaFree", [C.c_void_p], C.c_int),
-            ("cudaMemcpyAsync", [C.c_void_p, C.c_void_p, C.c_size_t, C.c_int, C.c_void_p], C.c_int),
-            ("cudaMemsetAsync", [C.c_void_p, C.c_int, C.c_size_t, C.c_void_p], C.c_int),
-            ("cudaStreamSynchronize", [C.c_void_p], C.c_int),
-            ("cudaGetErrorString", [C.c_int], C.c_char_p),
-        ]:
-            fn = getattr(self.lib, name)
-            fn.argtypes, fn.restype = args, restype
+        self.context = C.c_void_p()
+        self.previous_context = C.c_void_p()
+        self.closed = False
         for name, args in [
             ("cuInit", [C.c_uint]),
+            ("cuCtxGetCurrent", [C.POINTER(C.c_void_p)]),
+            ("cuCtxSetCurrent", [C.c_void_p]),
+            ("cuDevicePrimaryCtxRetain", [C.POINTER(C.c_void_p), C.c_int]),
+            ("cuDevicePrimaryCtxRelease", [C.c_int]),
+            ("cuStreamCreate", [C.POINTER(C.c_void_p), C.c_uint]),
+            ("cuStreamDestroy_v2", [C.c_void_p]),
+            ("cuStreamSynchronize", [C.c_void_p]),
+            ("cuMemAlloc_v2", [C.POINTER(C.c_uint64), C.c_size_t]),
+            ("cuMemFree_v2", [C.c_uint64]),
+            ("cuMemcpyHtoD_v2", [C.c_uint64, C.c_void_p, C.c_size_t]),
+            ("cuMemcpyDtoH_v2", [C.c_void_p, C.c_uint64, C.c_size_t]),
+            ("cuMemsetD8Async", [C.c_uint64, C.c_ubyte, C.c_size_t, C.c_void_p]),
+            ("cuGetErrorString", [C.c_int, C.POINTER(C.c_char_p)]),
             ("cuModuleLoadData", [C.POINTER(C.c_void_p), C.c_void_p]),
             ("cuModuleGetFunction", [C.POINTER(C.c_void_p), C.c_void_p, C.c_char_p]),
             ("cuModuleUnload", [C.c_void_p]),
@@ -62,30 +69,38 @@ class Runtime:
             fn = getattr(self.driver, name)
             fn.argtypes, fn.restype = args, C.c_int
         self.driver_check(self.driver.cuInit(0))
-        self.check(self.lib.cudaSetDevice(0))
-        # CUDA Runtime and OpenCV use this same device primary context. Never
-        # create a second context (e.g. pycuda.autoinit).
-        self.check(self.lib.cudaFree(C.c_void_p()))
+        self.driver_check(self.driver.cuCtxGetCurrent(C.byref(self.previous_context)))
+        self.driver_check(self.driver.cuDevicePrimaryCtxRetain(C.byref(self.context), 0))
+        try:
+            # Retain the same device primary context TensorRT/OpenCV use, never
+            # create a secondary context. Avoid initializing OpenCV CUDA: on
+            # CUDA 10.2 its eager module registration consumes about 500 MiB.
+            self.driver_check(self.driver.cuCtxSetCurrent(self.context))
+            stream = C.c_void_p()
+            self.driver_check(self.driver.cuStreamCreate(C.byref(stream), 0))
+            self.stream = int(stream.value)
+        except Exception:
+            self.driver.cuCtxSetCurrent(self.previous_context)
+            self.driver.cuDevicePrimaryCtxRelease(0)
+            raise
 
-    def check(self, status):
+    def driver_check(self, status):
         if status:
-            message = self.lib.cudaGetErrorString(status)
-            raise RuntimeError("CUDA {}: {}".format(status, message.decode() if message else "?"))
-
-    @staticmethod
-    def driver_check(status):
-        if status:
-            raise RuntimeError("CUDA driver error {}".format(status))
+            message = C.c_char_p()
+            self.driver.cuGetErrorString(status, C.byref(message))
+            raise RuntimeError("CUDA driver {}: {}".format(
+                status, message.value.decode() if message.value else "?"))
 
     def empty(self, shape, dtype="float32"):
         return DeviceBuffer(self, shape, dtype)
 
     def synchronize(self):
-        self.check(self.lib.cudaStreamSynchronize(C.c_void_p(self.stream)))
+        if not self.closed:
+            self.driver_check(self.driver.cuStreamSynchronize(C.c_void_p(self.stream)))
 
     def zero(self, tensor):
-        self.check(self.lib.cudaMemsetAsync(C.c_void_p(tensor.ptr), 0,
-                                          tensor.nbytes, C.c_void_p(self.stream)))
+        self.driver_check(self.driver.cuMemsetD8Async(
+            tensor.ptr, 0, tensor.nbytes, C.c_void_p(self.stream)))
 
     def upload(self, array, tensor=None):
         array = np.ascontiguousarray(array)
@@ -93,11 +108,11 @@ class Runtime:
             tensor = self.empty(array.shape, array.dtype)
         if array.nbytes != tensor.nbytes or array.dtype != tensor.dtype:
             raise ValueError("Host/device buffer mismatch")
-        self.check(self.lib.cudaMemcpyAsync(C.c_void_p(tensor.ptr),
-                                           C.c_void_p(array.ctypes.data), array.nbytes,
-                                           1, C.c_void_p(self.stream)))
-        # Uploads here are metadata/test fixtures, not the video upload path.
+        # Driver synchronous copies accept pageable JPEG/NumPy storage. Complete
+        # the single stream first; no implicit default-stream ordering assumed.
         self.synchronize()
+        self.driver_check(self.driver.cuMemcpyHtoD_v2(
+            tensor.ptr, C.c_void_p(array.ctypes.data), array.nbytes))
         return tensor
 
     def download(self, tensor, count=None):
@@ -105,10 +120,9 @@ class Runtime:
         array = np.empty(shape, dtype=tensor.dtype)
         if array.nbytes > tensor.nbytes:
             raise ValueError("Device download exceeds allocation")
-        self.check(self.lib.cudaMemcpyAsync(C.c_void_p(array.ctypes.data),
-                                           C.c_void_p(tensor.ptr), array.nbytes,
-                                           2, C.c_void_p(self.stream)))
         self.synchronize()
+        self.driver_check(self.driver.cuMemcpyDtoH_v2(
+            C.c_void_p(array.ctypes.data), tensor.ptr, array.nbytes))
         return array
 
     def load_kernels(self, directory=None):
@@ -144,12 +158,25 @@ class Runtime:
             function, *grid, *block, shared, C.c_void_p(self.stream), argv, None))
 
     def close(self):
-        try:
-            self.synchronize()
-        finally:
-            for buffer in list(self.buffers):
-                buffer.close()
-            for module in self.modules:
-                self.driver_check(self.driver.cuModuleUnload(module))
-            self.modules.clear()
-            self.kernel_modules.clear()
+        if self.closed:
+            return
+        error = None
+        actions = [self.synchronize]
+        actions += [buffer.close for buffer in list(self.buffers)]
+        actions += [lambda module=module: self.driver_check(self.driver.cuModuleUnload(module))
+                    for module in self.modules]
+        actions += [lambda: self.driver_check(self.driver.cuStreamDestroy_v2(C.c_void_p(self.stream))),
+                    lambda: self.driver_check(self.driver.cuCtxSetCurrent(self.previous_context)),
+                    lambda: self.driver_check(self.driver.cuDevicePrimaryCtxRelease(0))]
+        for action in actions:
+            try:
+                action()
+            except Exception as exc:
+                if error is None:
+                    error = exc
+        self.modules.clear()
+        self.kernel_modules.clear()
+        self.closed = True
+        self.stream = 0
+        if error is not None:
+            raise error

@@ -44,12 +44,19 @@ failure-detection accuracy on real prints.
 
 `detection.backend` defaults to `"torch"`; the worker also accepts
 `--backend torch` or `--backend native_cuda`. The native implementation uses
-TensorRT FP16, OpenCV CUDA preprocessing, and CUDA decode/class-aware NMS.
+TensorRT FP16, small CUDA preprocessing kernels, and CUDA decode/class-aware NMS.
 It imports no torch or torchvision and never falls back to the legacy backend
 if initialization, metadata checks, or inference fail. Obico, YOLOv8, and
 YOLOv5 retain their original class IDs. The known YOLOv8 export name
 `Spaghetti - v11 2025-04-15 12-28am` maps to `spaghetti`; other labels remain
 unchanged. The requested failure targets are `spaghetti`, `warping`, and `error`.
+
+OpenCV still decodes JPEG on the host. Native kernels perform resize, padding,
+RGB conversion, normalization and continuous NCHW packing on the GPU. Nano
+profiling found that initializing OpenCV CUDA adds about 500 MiB of eager module
+memory on CUDA 10.2, so the native backend retains the device primary context
+and owns one CUDA Driver stream instead. It neither calls OpenCV CUDA nor
+creates another context; dimensions change only the current source buffer.
 
 Compile each fixed-shape ONNX engine on the Jetson using its native TensorRT
 FP16 toolchain. Build the CUDA kernel PTX once as a separate preparation step,

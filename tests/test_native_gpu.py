@@ -12,11 +12,9 @@ ENABLED=os.environ.get("SPAGHETTI_NATIVE_GPU_TEST")=="1"
 class TestNativeGPU(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import cv2
         from native_cuda.runtime import Runtime
         cls.rt=Runtime()
-        cls.stream=cv2.cuda_Stream()
-        cls.rt.stream=int(cls.stream.cudaPtr())
+        cls.stream=cls.rt.stream
 
     @classmethod
     def tearDownClass(cls):
@@ -42,6 +40,19 @@ class TestNativeGPU(unittest.TestCase):
                     want=padded[:,:,::-1].transpose(2,0,1)[None].astype(np.float32)/255.
                     self.assertLessEqual(float(np.abs(got-want).max()),1.0001/255.)
                 finally: pre.close()
+
+    def test_preprocessing_avoids_opencv_cuda_module_initialization(self):
+        import cv2
+        import numpy as np
+        from unittest.mock import patch
+        from native_cuda.preprocess import GPUPreprocessor
+        _, encoded=cv2.imencode(".png",np.zeros((37,53,3),np.uint8))
+        with patch.object(cv2,"cuda_GpuMat",side_effect=AssertionError("OpenCV CUDA allocation")):
+            pre=GPUPreprocessor(self.rt,(416,416),self.stream)
+            try:
+                tensor,_=pre.decode_and_preprocess(encoded.tobytes())
+                self.assertEqual(self.rt.download(tensor).shape,(1,3,416,416))
+            finally:pre.close()
 
     def _post(self,kind,arrays,classes,threshold=.35,iou=.45):
         from native_cuda.postprocess import GPUPostProcessor

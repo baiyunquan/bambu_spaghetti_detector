@@ -9,7 +9,7 @@ on the native path. Source plan is the user's approved implementation request.
    NumPy reference decoder/NMS, and regression tests. ModelMetadata uses
    engine_path + '.meta.json'; labels preserve original class IDs.
 2. Native CUDA runtime: ctypes primary-context interoperability, reusable device
-   buffers and stream, OpenCV GPU planar NCHW preprocessing, NVRTC-built sm53
+   buffers and stream, CUDA planar NCHW preprocessing, NVRTC-built sm53
    decode/sort/bitmask/greedy NMS kernels with no top-k truncation. GPU tests.
 3. Integration: lazy backend selection (default torch), native warmup before
    socket bind, metadata/finite/error checks, controlled cleanup, docs/AGENTS.
@@ -35,3 +35,9 @@ first frame <5s; steady P95 <=110% baseline; startup budget120s.
 Three serial one-hour soaks; steady RSS/PSS growth <=16MiB; swap not increasing.
 No torch/torchvision/libtorch modules or mapped libraries on native path.
 No INT8, model shrinking, training, new printer controls or Rust rewrite.
+
+Hardware ruling: OpenCV CUDA initialization adds about 500 MiB on Nano.
+Use the approved small CUDA preprocessing alternative, retaining host OpenCV
+JPEG decode and the primary context through CUDA Driver bindings. The GPU
+resize matches OpenCV's CPU half-pixel/8-bit rounding; a fused kernel pads,
+converts RGB and writes continuous NCHW. No threshold or gate is relaxed.

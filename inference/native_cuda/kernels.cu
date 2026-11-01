@@ -27,6 +27,22 @@ extern "C" __global__ void resize_compatible(
     dst[y*dst_pitch+x*3+c]=(unsigned char)value;
 }
 
+// Fused padding, BGR -> RGB, FP32 normalization and continuous planar packing.
+// Source is already resized with the reference-compatible 8-bit rounding.
+extern "C" __global__ void letterbox_rgb_nchw(
+    const unsigned char* src, float* dst, int sw, int sh,
+    int width, int height, int left, int top)
+{
+    int i=blockIdx.x*blockDim.x+threadIdx.x;
+    int plane=width*height;
+    if (i>=3*plane) return;
+    int c=i/plane, y=(i%plane)/width-top, x=i%width-left;
+    unsigned char value=114;
+    if (x>=0 && x<sw && y>=0 && y<sh)
+        value=src[(y*sw+x)*3+2-c];
+    dst[i]=__fdiv_rn((float)value,255.f);
+}
+
 extern "C" __global__ void decode(
     const float* boxes, const float* scores, Candidate* out, int* counters,
     int n, int classes, int model, float threshold, int width, int height)
