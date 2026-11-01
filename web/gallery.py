@@ -74,6 +74,9 @@ class PhotoStore:
                              'class_id': detection.get('class_id')})
             # Only these evidence fields enter the page; never serve arbitrary JSON.
             metadata = {'timestamp': value['timestamp'], 'consecutive_hits': hits, 'detections': rows}
+            metadata['inference_error'] = bool(value.get('inference_error'))
+            metadata['capture_kind'] = value.get('capture_kind') if value.get('capture_kind') in ('print', 'manual', 'failure') else None
+            metadata['manual_requested'] = value.get('manual_requested') is True
         except (OSError, ValueError, UnicodeError, RecursionError, OverflowError):
             pass
         return {'filename': filename, 'metadata': metadata}

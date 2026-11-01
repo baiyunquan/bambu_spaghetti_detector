@@ -109,7 +109,7 @@ The CPU contract/backend regressions use pytest, without connecting to a printer
 python3 -m pytest -q tests/test_model_contract.py tests/test_backend_selection.py
 ```
 
-## Embedded read-only web interface
+## Embedded photo browser and Jetson monitor
 
 Install the web dependencies in the controller's Python 3.10 environment:
 
@@ -126,12 +126,24 @@ Add this section to `config.json` (configurations without it keep the UI disable
 Start the existing controller with `api/.venv/bin/python main.py --config config.json --dry-run`.
 Open `http://<jetson-ip>:8000/photos` or `/jetson` on the LAN. The UI runs in the
 controller process and stops with it; there is no separate web daemon. It has no
-login and only exposes saved photos and hardware metrics, with no inference,
-upload, deletion, configuration or printer-control endpoints.
+login and exposes saved photos, a “拍一张” action, and hardware metrics. There are
+no upload, deletion, configuration or printer-control endpoints.
 
 The gallery reads `storage.snapshots_dir`: 24 newest photos per page, full-size
 annotated images and detection tables from same-name JSON. Boxes already saved
 in the image are not drawn again. Missing metadata does not hide the image.
+Every received frame while the printer reports `RUNNING` is saved with all
+returned detections, including clean frames. Inference failures still save the
+image with an explicit error marker. Existing confirmed-failure evidence and
+multi-frame printer control rules remain in place. Photos are retained until
+removed outside the web UI; this feature does not automatically delete them.
+
+“拍一张” saves the next newly received camera frame even when idle and opens its
+detail page. It shares the existing camera stream and inference client, admits
+one pending request, and times out after 10 seconds if no new frame arrives.
+There is no second camera connection, frame history cache, or extra GPU client.
+Refresh the gallery to see new print records. JPEG/JSON files publish atomically
+with unique names so multiple frames in one second do not overwrite one another.
 Bootstrap and Chart.js assets are bundled with licenses and SHA256 checksums,
 so pages work without internet/CDN access. The layout uses square corners and
 plain Chinese text without decorative icons.

@@ -12,11 +12,11 @@ logger = logging.getLogger('Web')
 
 
 class EmbeddedWebServer:
-    def __init__(self, snapshot_dir, host='0.0.0.0', port=8000, sampler=None):
+    def __init__(self, snapshot_dir, host='0.0.0.0', port=8000, sampler=None, capture=None):
         self.host, self.port = host, port
         self.sampler = sampler if sampler is not None else TelemetrySampler()
         self._server = uvicorn.Server(uvicorn.Config(
-            create_app(snapshot_dir, sampler=self.sampler), host=host, port=port,
+            create_app(snapshot_dir, sampler=self.sampler, capture=capture), host=host, port=port,
             loop='asyncio', http='h11', ws='none', workers=1, reload=False,
             access_log=False, log_level='warning', use_colors=False,
             timeout_graceful_shutdown=3, timeout_keep_alive=2, limit_concurrency=32))

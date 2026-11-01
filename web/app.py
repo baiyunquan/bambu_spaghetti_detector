@@ -13,7 +13,7 @@ from .gallery import PhotoStore
 HERE = Path(__file__).resolve().parent
 
 
-def create_app(snapshot_dir, sampler=None):
+def create_app(snapshot_dir, sampler=None, capture=None):
     if sampler is None:
         from .telemetry import TelemetrySampler
         sampler = TelemetrySampler()
@@ -59,6 +59,28 @@ def create_app(snapshot_dir, sampler=None):
         except OSError:
             raise HTTPException(404, '照片不存在')
         return templates.TemplateResponse(request=request, name='detail.html', context={'tab':'photos',**data})
+
+    @app.post('/api/photos/capture', status_code=201)
+    def take_photo(request: Request):
+        from api.frame_recording import CaptureBusy, CaptureUnavailable
+        # A custom header prevents cross-site forms; Origin also protects browser requests.
+        origin = request.headers.get('origin')
+        expected_origin = '{}://{}'.format(request.url.scheme, request.headers.get('host', ''))
+        if request.headers.get('x-capture-request') != '1' or (origin and origin != expected_origin):
+            raise HTTPException(403, '请从本站照片页发起拍摄')
+        if capture is None:
+            raise HTTPException(503, '相机采集尚未就绪')
+        try:
+            filename = capture.request(timeout=10)
+        except CaptureBusy as exc:
+            raise HTTPException(409, str(exc) or '已有拍摄请求')
+        except CaptureUnavailable as exc:
+            raise HTTPException(503, str(exc) or '相机采集不可用')
+        except TimeoutError as exc:
+            raise HTTPException(504, str(exc) or '拍摄超时，请检查相机连接')
+        except OSError as exc:
+            raise HTTPException(507, '照片保存失败，请检查磁盘空间和目录权限')
+        return {'filename': filename, 'url': request.url_for('detail', filename=filename).path}
 
     @app.get('/media/{filename}')
     def image(filename: str):

@@ -76,4 +76,7 @@ def test_main_inference_error_cannot_bridge_positive_frames(tmp_path, capsys, ca
     fourth_frame = output.split('[Frame #4]')[-1]
     assert '[Hits: 1/3]' in fourth_frame
     assert 'CONFIRMED FAILURE' not in caplog.text
-    assert list(snapshots.iterdir()) == []
+    assert not list(snapshots.glob('failure_*'))
+    assert len(list(snapshots.glob('print_*.jpg'))) == 4
+    records = [json.loads(p.read_text()) for p in snapshots.glob('print_*.json')]
+    assert sum(bool(r['inference_error']) for r in records) == 1

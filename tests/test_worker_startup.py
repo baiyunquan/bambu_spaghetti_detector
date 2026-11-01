@@ -20,6 +20,7 @@ class TestWorkerStartup(unittest.TestCase):
         self.app.config = {"detection": {"model_engine": "models/test.engine"}}
         self.app.running = True
         self.app.worker_process = None
+        self.app.capture_requests = main.CaptureRequests()
         self.elapsed = 0.0
 
     def external_dependencies(self, exit_code=None, socket_exists_at=1., listen_at=70.):

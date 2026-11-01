@@ -29,6 +29,7 @@ from api.mqtt_controller import A1MQTTController
 from api.ipc_client import InferenceClient, SOCKET_PATH
 from api.decision_engine import DecisionEngine
 from api.snapshot import SnapshotManager
+from api.frame_recording import CaptureRequests, FrameRecorder
 
 # Setup Logging
 logging.basicConfig(
@@ -51,6 +52,7 @@ class SpaghettiDetectionApp:
         self.worker_process = None
         self.running = False
         self.web_server = None
+        self.capture_requests = CaptureRequests()
         self.video_stream = self.mqtt_controller = self.ipc_client = None
 
     def _load_config(self) -> dict:
@@ -145,7 +147,8 @@ class SpaghettiDetectionApp:
             from web.server import EmbeddedWebServer
             self.web_server = EmbeddedWebServer(
                 snapshot_dir=BASE_DIR / self.config.get("storage", {}).get("snapshots_dir", "snapshots"),
-                host=web_config.get("host", "0.0.0.0"), port=web_config.get("port", 8000))
+                host=web_config.get("host", "0.0.0.0"), port=web_config.get("port", 8000),
+                capture=self.capture_requests)
             self.web_server.start()
         except Exception as exc:
             logger.error("Web UI unavailable; print monitoring continues: %s", exc)
@@ -226,6 +229,7 @@ class SpaghettiDetectionApp:
         snapshot_mgr = SnapshotManager(
             output_dir=str(BASE_DIR / storage_cfg.get("snapshots_dir", "snapshots"))
         )
+        frame_recorder = FrameRecorder(snapshot_mgr, self.capture_requests)
 
         # 4. Start MQTT Controller
         mqtt_controller = self.mqtt_controller = A1MQTTController(
@@ -255,13 +259,18 @@ class SpaghettiDetectionApp:
 
         # 7. Main Monitoring Loop
         frame_idx = 0
+        self.capture_requests.start()
         try:
             for jpeg_frame in video_stream.stream_frames():
                 if not self.running:
                     break
 
                 frame_idx += 1
+                frame_received_at = time.monotonic()
                 current_state = mqtt_controller.gcode_state
+                printer_info = {"serial": target_serial, "ip": printer_ip,
+                                "layer": mqtt_controller.current_layer,
+                                "progress": mqtt_controller.progress_percent}
 
                 # Send frame to GPU TensorRT Worker
                 t0 = time.time()
@@ -270,11 +279,15 @@ class SpaghettiDetectionApp:
                 except Exception as e:
                     logger.error(f"Inference error: {e}")
                     decision_engine.invalidate_frame()
+                    frame_recorder.record(jpeg_frame, [], 0, current_state, printer_info,
+                                          inference_error=str(e), frame_received_at=frame_received_at)
                     continue
                 dt_ms = (time.time() - t0) * 1000.0
 
                 # Decision state machine evaluation
                 eval_res = decision_engine.evaluate_frame(detections, current_state)
+                frame_recorder.record(jpeg_frame, detections, eval_res["consecutive_hits"],
+                                      current_state, printer_info, frame_received_at=frame_received_at)
 
                 # Console telemetry line
                 hits = eval_res["consecutive_hits"]
@@ -293,18 +306,15 @@ class SpaghettiDetectionApp:
                     logger.critical("🚨 FAILURE TRIGGER ACTIVATED!")
 
                     # Save evidence snapshot
-                    snap_path = snapshot_mgr.save_failure_evidence(
-                        jpeg_bytes=jpeg_frame,
-                        detections=eval_res["matching_detections"],
-                        consecutive_hits=hits,
-                        printer_info={
-                            "serial": target_serial,
-                            "ip": printer_ip,
-                            "layer": mqtt_controller.current_layer,
-                            "progress": mqtt_controller.progress_percent
-                        }
-                    )
-                    logger.critical(f"Annotated forensic snapshot saved to: {snap_path}")
+                    try:
+                        snap_path = snapshot_mgr.save_failure_evidence(
+                            jpeg_bytes=jpeg_frame,
+                            detections=eval_res["matching_detections"],
+                            consecutive_hits=hits,
+                            printer_info=printer_info)
+                        logger.critical(f"Annotated forensic snapshot saved to: {snap_path}")
+                    except Exception:
+                        logger.exception("Could not save failure evidence; proceeding with confirmed action")
 
                     # Dispatch printer control
                     if not decision_engine.dry_run:
@@ -322,6 +332,7 @@ class SpaghettiDetectionApp:
 
     def stop(self):
         self.running = False
+        self.capture_requests.stop()
         for attribute, method in (("video_stream", "disconnect"), ("mqtt_controller", "stop"),
                                   ("ipc_client", "close"), ("web_server", "stop")):
             component = getattr(self, attribute, None)

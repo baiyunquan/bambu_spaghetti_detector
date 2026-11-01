@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 from PIL import Image, ImageDraw, ImageFont
 import io
+from uuid import uuid4
 
 
 class SnapshotManager:
@@ -27,15 +28,18 @@ class SnapshotManager:
         consecutive_hits: int,
         printer_info: Dict[str, Any] = None
     ) -> str:
-        """
-        Renders bounding boxes onto the frame and saves the evidence snapshot.
+        return self.save_frame(jpeg_bytes, detections, consecutive_hits, printer_info,
+                               capture_kind='failure')
 
-        Returns:
-            Saved image file path string.
-        """
-        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        img_filename = f"failure_{timestamp_str}.jpg"
-        json_filename = f"failure_{timestamp_str}.json"
+    def save_frame(self, jpeg_bytes, detections, consecutive_hits, printer_info=None,
+                   capture_kind='print', manual_requested=False, inference_error=None):
+        """Publish one annotated JPEG and sidecar without exposing partial files."""
+        if inference_error is not None:
+            inference_error = str(inference_error) or 'Inference failed'
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        stem = '{}_{}_{}'.format(capture_kind, timestamp_str, uuid4().hex[:8])
+        img_filename = stem + '.jpg'
+        json_filename = stem + '.json'
         img_path = self.output_dir / img_filename
         json_path = self.output_dir / json_filename
 
@@ -59,21 +63,35 @@ class SnapshotManager:
             draw.text((x1 + 4, text_y + 2), text, fill=(255, 255, 255))
 
         # Header watermark
-        header_text = f"[ALERT] SPAGHETTI FAILURE CONFIRMED ({consecutive_hits} consecutive hits) | {timestamp_str}"
+        if capture_kind == 'failure':
+            header_text = f"[ALERT] FAILURE CONFIRMED ({consecutive_hits} consecutive hits) | {timestamp_str}"
+        else:
+            header_text = '{} | {} | {}'.format(capture_kind.upper(),
+                'INFERENCE ERROR' if inference_error else '{} detections'.format(len(detections)), timestamp_str)
         draw.rectangle([10, 10, 10 + len(header_text) * 9 + 20, 36], fill=(0, 0, 0))
         draw.text((15, 15), header_text, fill=(255, 50, 50))
 
-        # Save annotated image
-        image.save(str(img_path), "JPEG", quality=90)
-
-        # Save metadata JSON
         metadata = {
             "timestamp": timestamp_str,
             "consecutive_hits": consecutive_hits,
             "detections": detections,
-            "printer": printer_info or {}
+            "printer": printer_info or {},
+            "capture_kind": capture_kind,
+            "manual_requested": manual_requested,
+            "inference_error": inference_error
         }
-        with open(str(json_path), "w") as f:
-            json.dump(metadata, f, indent=2)
+        img_tmp = img_path.with_suffix('.jpg.tmp')
+        json_tmp = json_path.with_suffix('.json.tmp')
+        try:
+            image.save(str(img_tmp), "JPEG", quality=90)
+            json_tmp.write_text(json.dumps(metadata, ensure_ascii=False, allow_nan=False), encoding='utf-8')
+            json_tmp.replace(json_path)
+            img_tmp.replace(img_path)
+        except BaseException:
+            for path in (img_tmp, json_tmp, json_path):
+                path.unlink(missing_ok=True)
+            raise
+        finally:
+            image.close()
 
         return str(img_path)
