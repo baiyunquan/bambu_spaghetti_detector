@@ -83,9 +83,13 @@ Keep `"backend": "torch"` until all validation gates pass: all five engines and
 1/255, boxes at most 1 pixel, scores at most 1e-3, and the same failure and
 multi-frame decisions). Steady RSS must be at most 1.5 GiB, peak RSS at most
 1.8 GiB, with at least 800 MiB saved versus the runnable baseline; steady P95
-latency must be within 110% of baseline. Run separate one-hour soaks for
-Obico416, YOLOv8 640, and YOLOv5 640: steady RSS/PSS growth at most 16 MiB and
-no increasing swap. Verify no torch/torchvision modules or libtorch mappings
+latency must be within 110% of baseline. The original extended acceptance also
+includes separate one-hour soaks for Obico416, YOLOv8 640, and YOLOv5 640:
+steady RSS/PSS growth at most 16 MiB and no increasing swap. On 2026-11-01 the
+user explicitly removed the one-hour tests from this deployment's requirements;
+functional equivalence, UDS, memory and latency measurements remain required.
+Long-duration leak/swap stability is therefore unverified for this deployment.
+Verify no torch/torchvision modules or libtorch mappings
 on the native path. Hash-check deployed artifacts before explicitly switching
 the backend. Stop the existing worker before changing backends because the
 controller reuses an already active socket. Keep dry-run enabled while validating.

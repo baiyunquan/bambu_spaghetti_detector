@@ -14,7 +14,7 @@ on the native path. Source plan is the user's approved implementation request.
 3. Integration: lazy backend selection (default torch), native warmup before
    socket bind, metadata/finite/error checks, controlled cleanup, docs/AGENTS.
 4. Verification: all five engines, 295 held-out images, serial old/new benchmarks,
-   one-hour soak each on Obico416/YOLOv8640/YOLOv5640, independent review,
+   optional extended one-hour soaks on Obico416/YOLOv8640/YOLOv5640, independent review,
    then hash-checked deployment and explicit backend switch only if gates pass.
 
 ## Binding interfaces
@@ -32,7 +32,10 @@ RGB/preprocessing error <=1/255; boxes <=1px and scores <=1e-3 versus corrected
 reference, same failure and multi-frame decisions on 295 images.
 Steady RSS <=1.5GiB; peak <=1.8GiB; >=800MiB saving against runnable baseline;
 first frame <5s; steady P95 <=110% baseline; startup budget120s.
-Three serial one-hour soaks; steady RSS/PSS growth <=16MiB; swap not increasing.
+Original extended gate: three serial one-hour soaks, steady RSS/PSS growth
+<=16MiB, swap not increasing. User explicitly cancelled these tests on Nov 1;
+deploy after successful three-model inference and completed short validation.
+Do not report long-duration stability as verified.
 No torch/torchvision/libtorch modules or mapped libraries on native path.
 No INT8, model shrinking, training, new printer controls or Rust rewrite.
 
