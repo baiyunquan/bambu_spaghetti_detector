@@ -60,5 +60,29 @@ override and the staging server were stopped afterwards.
 Production code, private configuration, model hashes, and the three existing
 untracked model metadata files were backed up to
 `/home/jetson/spaghetti-web-backup-20261101` before deployment. Metadata hashes
-matched the versions already tracked on local main. Deployment verification is
-recorded below after the production controller is started.
+matched the versions already tracked on local main. Production was fast-forwarded
+to `41eeb9a`, preserving all engine/PTX hashes. Only the `web` section of the
+private configuration changed. Model, 0.30 confidence, consecutive hits,
+`spaghetti/warping/error`, and `dry_run=true` remained unchanged.
+
+The repository's systemd unit was installed for a manual persistent start;
+it remains **disabled at boot**. A real service stop/restart took 2.04 seconds:
+controller and both child processes were reaped, the UDS was removed, and the
+web port closed. After restart there is exactly one tegrastats process, metrics
+status is `ok`, and controller/worker mappings contain no torch libraries.
+`deployment.json` records the sanitized live result. The documentation-only
+commit following this report does not require restarting the service.
+
+LAN requests to `http://192.168.114.152:8000/photos` returned HTTP 200. `/jetson`
+and `/api/jetson` also returned 200, with the actual AO, CPU, GPU, PLL, PMIC and
+thermal sensors. Production snapshots are currently empty, correctly rendering
+“暂无照片”. The A1 camera connection currently times out; live printer capture
+was therefore **not verified**. Offline inference on its existing real JPEG
+passed, and the web UI remains available while camera reconnection continues.
+
+Rollback: stop `bambu-spaghetti-detector.service`, restore the private config
+from the backup (the prior config has no enabled web section), then start the
+service. The retained legacy backend and inference settings are unchanged.
+For a complete source rollback, the old tracked source archive, original HEAD,
+model manifest, and metadata are all in the backup directory. Do not enable
+the service automatically during rollback.

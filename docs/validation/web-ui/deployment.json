@@ -1,0 +1,41 @@
+{
+  "responses": {
+    "/photos": 200,
+    "/jetson": 200,
+    "/api/jetson": 200
+  },
+  "processes": [
+    {
+      "role": "controller",
+      "pid": 10233,
+      "rss_kib": 55076,
+      "torch_libraries_loaded": false
+    },
+    {
+      "role": "tegrastats",
+      "pid": 10236,
+      "rss_kib": 868,
+      "torch_libraries_loaded": false
+    },
+    {
+      "role": "worker",
+      "pid": 10237,
+      "rss_kib": 1085880,
+      "torch_libraries_loaded": false
+    }
+  ],
+  "metrics_status": "ok",
+  "sensor_names": [
+    "AO",
+    "CPU",
+    "GPU",
+    "PLL",
+    "PMIC",
+    "thermal"
+  ],
+  "camera_connection_timeout_observed": true,
+  "worker_ready": true,
+  "service_state": "active",
+  "boot_enabled": "disabled",
+  "head": "41eeb9ad328f43f09a544091a9a668eb8e4ea0ae"
+}
