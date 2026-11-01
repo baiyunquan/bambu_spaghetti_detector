@@ -1,0 +1,9 @@
+{
+  "class_names": [
+    "Spaghetti - v11 2025-04-15 12-28am",
+    "warping"
+  ],
+  "engine_sha256": "1a079784fb9b795bd1bc6f154d8ea0c2ce77642af3d1ac12839366d780e50c88",
+  "model_type": "yolov8",
+  "schema_version": 1
+}

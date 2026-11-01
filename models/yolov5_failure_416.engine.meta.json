@@ -1,0 +1,11 @@
+{
+  "class_names": [
+    "error",
+    "extrusor",
+    "part",
+    "spaghetti"
+  ],
+  "engine_sha256": "e4a932ca3c726729f7e03a7c26b8051ce544b0518e7a55f307fbdc85889ff315",
+  "model_type": "yolov5",
+  "schema_version": 1
+}

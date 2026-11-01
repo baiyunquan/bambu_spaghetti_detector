@@ -1,0 +1,8 @@
+{
+  "class_names": [
+    "spaghetti"
+  ],
+  "engine_sha256": "d892c7e9206cceb21c2aaa7dbd81d2cc7e073f9bd9c82c0dba1541915b22a2b7",
+  "model_type": "obico",
+  "schema_version": 1
+}
