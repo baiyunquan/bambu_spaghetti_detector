@@ -1,0 +1,8 @@
+{
+  "class_names": [
+    "spaghetti"
+  ],
+  "engine_sha256": "992e2e7a85b4ba1e72662f91c0ce92c65e2120ec9d8f5f4c9e8b994ed7327ff4",
+  "model_type": "yolo11",
+  "schema_version": 1
+}

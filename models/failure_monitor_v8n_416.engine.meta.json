@@ -1,0 +1,10 @@
+{
+  "class_names": [
+    "spaghetti",
+    "stringing",
+    "warping"
+  ],
+  "engine_sha256": "14b321417bd9eadb6c405ad6b874194f6e197a61d480dc91db862d9912b6f0ba",
+  "model_type": "yolov8",
+  "schema_version": 1
+}
