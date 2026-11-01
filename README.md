@@ -160,4 +160,5 @@ Tests (controller environment plus pytest/httpx2; Node only for frontend tests):
 ```bash
 python -m pytest -q tests/test_web_gallery.py tests/test_web_telemetry.py tests/test_web_lifecycle.py
 node tests/test_web_chart.cjs
+node tests/test_web_capture.cjs
 ```

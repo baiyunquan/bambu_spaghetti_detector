@@ -1,0 +1,15 @@
+{
+  "source_head": "dfcad0037fc7e97030011a33a148818a40427ae5",
+  "manual_filename": "manual_20260729_160500_614584_237cd2fd.jpg",
+  "image_size": [
+    1536,
+    1080
+  ],
+  "detections": 0,
+  "printer_state": "FINISH",
+  "image_and_detail_visible": true,
+  "config_and_engine_unchanged": true,
+  "controller_rss_kib": 63572,
+  "service_active": "active",
+  "boot_enabled": "disabled"
+}

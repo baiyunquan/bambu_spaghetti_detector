@@ -56,7 +56,7 @@ class EmbeddedWebServer:
                 raise RuntimeError('Web server failed to start: {}'.format(self._error or 'server exited'))
             if self._server.started:
                 self.port = self._server.servers[0].sockets[0].getsockname()[1]
-                logger.info('Read-only web listening on %s:%s', self.host, self.port)
+                logger.info('Photo web listening on %s:%s', self.host, self.port)
                 return
             time.sleep(.01)
         self.stop()
