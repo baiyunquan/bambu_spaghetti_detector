@@ -62,7 +62,7 @@ The Bambu Lab A1 camera produces ~0.5 to 2 FPS (1280x720 JPEG frames):
 
 1. **Preprocessing Pipeline**:
    - JPEG bytes are decoded into host memory using OpenCV.
-   - Decoded frames are immediately uploaded to GPU memory as PyTorch CUDA Tensors (or `cv2.cuda_GpuMat`).
+   - Decoded frames are immediately uploaded to GPU memory using owned native CUDA buffers (`DeviceTensor`), `cv2.cuda_GpuMat`, or the explicit legacy PyTorch CUDA backend. Native preprocessing must keep all pixel transforms on GPU and provide continuous NCHW storage directly to TensorRT.
    - Color space conversion (BGR -> RGB), Letterbox aspect-ratio preserving resize, padding, and normalization (`/ 255.0`) are executed entirely within GPU memory.
    - Preprocessed GPU buffers map directly to TensorRT input binding pointers, eliminating unnecessary CPU-GPU memory copies.
 2. **Resource & Memory Budget**:

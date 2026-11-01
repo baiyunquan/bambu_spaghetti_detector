@@ -1,0 +1,382 @@
+{
+  "date": "2026-11-01",
+  "baseline_commit": "044d44eef7ab25879cde0d0d6f0a14137944790f",
+  "runtime_code_commit": "ffd954efe413bb9eca69954f779cf936a158b1be",
+  "deployed_commit": "016bbe7a41e7e2390b56e74367ac8b998c1d779b",
+  "deployment_gates_passed": true,
+  "one_hour_soaks": "explicitly cancelled by user; long-duration stability unverified",
+  "equivalence": {
+    "obico_spaghetti": {
+      "frames": 295,
+      "failures": 0,
+      "max_pixel_error": 0.0
+    },
+    "yolov8_failure_416": {
+      "frames": 295,
+      "failures": 0,
+      "max_pixel_error": 0.0
+    },
+    "yolov8_failure_640": {
+      "frames": 295,
+      "failures": 0,
+      "max_pixel_error": 0.0
+    },
+    "yolov5_failure_416": {
+      "frames": 295,
+      "failures": 0,
+      "max_pixel_error": 0.0
+    },
+    "yolov5_failure_640": {
+      "frames": 295,
+      "failures": 0,
+      "max_pixel_error": 0.0
+    }
+  },
+  "benchmarks": {
+    "obico_spaghetti": {
+      "legacy": {
+        "stage": "replay_summary",
+        "backend": "torch",
+        "phase": "benchmark",
+        "duration_s": 11.08127588100001,
+        "frames": 100,
+        "first_ms": 138.8471870000103,
+        "median_ms": 103.72617200005152,
+        "p95_ms": 112.40663015000791,
+        "growth_kib": {},
+        "VmHWM": 2869836,
+        "VmRSS": 2685972,
+        "VmSwap": 440480,
+        "Pss": 2388800,
+        "MemAvailable": 273900,
+        "SwapFree": 1559632,
+        "model_type": "obico"
+      },
+      "native": {
+        "stage": "replay_summary",
+        "backend": "native_cuda",
+        "phase": "benchmark",
+        "duration_s": 9.895015778000015,
+        "frames": 100,
+        "first_ms": 103.91406200005804,
+        "median_ms": 96.29677050008922,
+        "p95_ms": 104.6311847999732,
+        "growth_kib": {},
+        "VmHWM": 1326692,
+        "VmRSS": 1077648,
+        "VmSwap": 0,
+        "Pss": 1004564,
+        "MemAvailable": 2283796,
+        "SwapFree": 2000812,
+        "model_type": "obico"
+      },
+      "saving_kib": 1608324,
+      "p95_ratio": 0.930827520230272
+    },
+    "yolov8_failure_640": {
+      "legacy": {
+        "stage": "replay_summary",
+        "backend": "torch",
+        "phase": "benchmark",
+        "duration_s": 26.88305186499997,
+        "frames": 100,
+        "first_ms": 269.9232820000361,
+        "median_ms": 263.09947900006136,
+        "p95_ms": 274.2592523001008,
+        "growth_kib": {},
+        "VmHWM": 3264408,
+        "VmRSS": 3095952,
+        "VmSwap": 350008,
+        "Pss": 2766219,
+        "MemAvailable": 225868,
+        "SwapFree": 1649860,
+        "model_type": "yolov8"
+      },
+      "native": {
+        "stage": "replay_summary",
+        "backend": "native_cuda",
+        "phase": "benchmark",
+        "duration_s": 26.637487384999986,
+        "frames": 100,
+        "first_ms": 261.99145800001133,
+        "median_ms": 260.7881249999764,
+        "p95_ms": 273.4618538999598,
+        "growth_kib": {},
+        "VmHWM": 1478032,
+        "VmRSS": 1478032,
+        "VmSwap": 0,
+        "Pss": 1372119,
+        "MemAvailable": 2278416,
+        "SwapFree": 1999940,
+        "model_type": "yolov8"
+      },
+      "saving_kib": 1617920,
+      "p95_ratio": 0.9970925378325306
+    },
+    "yolov5_failure_640": {
+      "legacy": {
+        "stage": "replay_summary",
+        "backend": "torch",
+        "phase": "benchmark",
+        "duration_s": 9.78131286100006,
+        "frames": 100,
+        "first_ms": 101.14145800002916,
+        "median_ms": 90.14158849993237,
+        "p95_ms": 98.87494554993737,
+        "growth_kib": {},
+        "VmHWM": 3354652,
+        "VmRSS": 3258988,
+        "VmSwap": 52980,
+        "Pss": 2959836,
+        "MemAvailable": 545004,
+        "SwapFree": 1946412,
+        "model_type": "yolov5"
+      },
+      "native": {
+        "stage": "replay_summary",
+        "backend": "native_cuda",
+        "phase": "benchmark",
+        "duration_s": 9.246295309000061,
+        "frames": 100,
+        "first_ms": 96.87776099985967,
+        "median_ms": 90.15862000001107,
+        "p95_ms": 97.0394559499482,
+        "growth_kib": {},
+        "VmHWM": 1082436,
+        "VmRSS": 1082436,
+        "VmSwap": 0,
+        "Pss": 1008941,
+        "MemAvailable": 2718264,
+        "SwapFree": 1999392,
+        "model_type": "yolov5"
+      },
+      "saving_kib": 2176552,
+      "p95_ratio": 0.9814362517240312
+    },
+    "yolov5_failure_416": {
+      "legacy": {
+        "stage": "replay_summary",
+        "backend": "torch",
+        "phase": "benchmark",
+        "duration_s": 5.961662914000044,
+        "frames": 100,
+        "first_ms": 76.0390099999313,
+        "median_ms": 53.74096400009876,
+        "p95_ms": 56.413354499977686,
+        "growth_kib": {},
+        "VmHWM": 3307776,
+        "VmRSS": 3212480,
+        "VmSwap": 82736,
+        "Pss": 2913885,
+        "MemAvailable": 585848,
+        "SwapFree": 1911872,
+        "model_type": "yolov5"
+      },
+      "native": {
+        "stage": "replay_summary",
+        "backend": "native_cuda",
+        "phase": "benchmark",
+        "duration_s": 5.20264432099998,
+        "frames": 100,
+        "first_ms": 82.57666600002267,
+        "median_ms": 47.82979150013489,
+        "p95_ms": 54.8971065501064,
+        "growth_kib": {},
+        "VmHWM": 1084492,
+        "VmRSS": 1083140,
+        "VmSwap": 0,
+        "Pss": 1009448,
+        "MemAvailable": 2787736,
+        "SwapFree": 1995372,
+        "model_type": "yolov5"
+      },
+      "saving_kib": 2129340,
+      "p95_ratio": 0.9731225351991454
+    }
+  },
+  "production_smoke": {
+    "passed": true,
+    "startup_s": 8.024627392999946,
+    "client_timeout_s": 5.0,
+    "frames": [
+      {
+        "index": 1,
+        "roundtrip_ms": 78.88833300012266,
+        "detections": 0
+      },
+      {
+        "index": 2,
+        "roundtrip_ms": 78.48229199998968,
+        "detections": 0
+      },
+      {
+        "index": 3,
+        "roundtrip_ms": 86.50786399994104,
+        "detections": 0
+      },
+      {
+        "index": 4,
+        "roundtrip_ms": 87.78426999992917,
+        "detections": 0
+      },
+      {
+        "index": 5,
+        "roundtrip_ms": 87.3607290000109,
+        "detections": 0
+      },
+      {
+        "index": 6,
+        "roundtrip_ms": 84.39291700005924,
+        "detections": 0
+      },
+      {
+        "index": 7,
+        "roundtrip_ms": 85.14953100007006,
+        "detections": 0
+      },
+      {
+        "index": 8,
+        "roundtrip_ms": 81.26343699996141,
+        "detections": 0
+      },
+      {
+        "index": 9,
+        "roundtrip_ms": 78.71942699989631,
+        "detections": 0
+      },
+      {
+        "index": 10,
+        "roundtrip_ms": 72.5463020000916,
+        "detections": 0
+      },
+      {
+        "index": 11,
+        "roundtrip_ms": 79.67088500004138,
+        "detections": 0
+      },
+      {
+        "index": 12,
+        "roundtrip_ms": 72.53802099990025,
+        "detections": 0
+      },
+      {
+        "index": 13,
+        "roundtrip_ms": 71.51171800001066,
+        "detections": 0
+      },
+      {
+        "index": 14,
+        "roundtrip_ms": 72.21942699993633,
+        "detections": 0
+      },
+      {
+        "index": 15,
+        "roundtrip_ms": 69.1589059999842,
+        "detections": 0
+      },
+      {
+        "index": 16,
+        "roundtrip_ms": 71.72682299983535,
+        "detections": 0
+      },
+      {
+        "index": 17,
+        "roundtrip_ms": 72.5390109998898,
+        "detections": 0
+      },
+      {
+        "index": 18,
+        "roundtrip_ms": 71.966459000123,
+        "detections": 0
+      },
+      {
+        "index": 19,
+        "roundtrip_ms": 69.49583400000847,
+        "detections": 0
+      },
+      {
+        "index": 20,
+        "roundtrip_ms": 73.98244799992426,
+        "detections": 0
+      }
+    ],
+    "bad_jpeg_error": "Inference worker returned error: Failed to decode JPEG bytes",
+    "recovered_after_bad_jpeg": true,
+    "no_torch_library_mappings": true,
+    "memory_kib": {
+      "VmHWM": 1085672,
+      "VmRSS": 1085672,
+      "VmSwap": 0,
+      "Pss": 1009448
+    },
+    "target_trigger_results": {
+      "spaghetti": true,
+      "warping": true,
+      "error": true,
+      "extrusor": false,
+      "part": false
+    },
+    "backend": "native_cuda",
+    "model_engine": "models/yolov5_failure_416.engine",
+    "confidence_threshold": 0.3,
+    "dry_run": true,
+    "worker_clean_exit": true
+  },
+  "models": {
+    "obico_spaghetti.engine.meta.json": {
+      "class_names": [
+        "spaghetti"
+      ],
+      "engine_sha256": "d892c7e9206cceb21c2aaa7dbd81d2cc7e073f9bd9c82c0dba1541915b22a2b7",
+      "model_type": "obico",
+      "schema_version": 1
+    },
+    "yolov5_failure_416.engine.meta.json": {
+      "class_names": [
+        "error",
+        "extrusor",
+        "part",
+        "spaghetti"
+      ],
+      "engine_sha256": "e4a932ca3c726729f7e03a7c26b8051ce544b0518e7a55f307fbdc85889ff315",
+      "model_type": "yolov5",
+      "schema_version": 1
+    },
+    "yolov5_failure_640.engine.meta.json": {
+      "class_names": [
+        "error",
+        "extrusor",
+        "part",
+        "spaghetti"
+      ],
+      "engine_sha256": "94ad5f67ddfc010b65e9f31afaf616c670985b1cfc3603577a7195c00f56fbb3",
+      "model_type": "yolov5",
+      "schema_version": 1
+    },
+    "yolov8_failure_416.engine.meta.json": {
+      "class_names": [
+        "Spaghetti - v11 2025-04-15 12-28am",
+        "warping"
+      ],
+      "engine_sha256": "1a079784fb9b795bd1bc6f154d8ea0c2ce77642af3d1ac12839366d780e50c88",
+      "model_type": "yolov8",
+      "schema_version": 1
+    },
+    "yolov8_failure_640.engine.meta.json": {
+      "class_names": [
+        "Spaghetti - v11 2025-04-15 12-28am",
+        "warping"
+      ],
+      "engine_sha256": "0380d2506d11bec3259f1c6efcf73a28ead27b6b7723ff0efcf53f91ec702c77",
+      "model_type": "yolov8",
+      "schema_version": 1
+    }
+  },
+  "compiled_artifacts_sha256": {
+    "kernels.cu": "a3d40094929d16eace574413045b69ceaea71fa68005053dc54793029f195ae0",
+    "kernels.ptx": "4acd7e134f665835a46753a56cb8a33576fc53705c41d43645145c80777a8cb6",
+    "kernels.json": "94e97df56a1c2fdf2b0922c561c48ba0ff0861ea2d5fc1f4daacc1c65bf79bda",
+    "heldout.json": "a3fdabab9b0e5415bd3cd84eb5dac9b72d2c741cae9c9bc50926b8a2bdba9736"
+  },
+  "rollback_backup": "/home/jetson/spaghetti-native-validation/backup-native-20261101-d1f6f11b"
+}
