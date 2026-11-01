@@ -22,6 +22,11 @@
     "action": "pause",
     "cooldown_seconds": 180
   },
+  "web": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8000
+  },
   "storage": {
     "snapshots_dir": "snapshots",
     "logs_dir": "logs"

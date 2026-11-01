@@ -37,7 +37,8 @@ class TestWorkerStartup(unittest.TestCase):
                     raise ConnectionRefusedError("Not listening yet")
 
         stack = ExitStack()
-        worker = SimpleNamespace(poll=lambda: exit_code, returncode=exit_code, pid=123)
+        worker = SimpleNamespace(poll=lambda: exit_code, returncode=exit_code, pid=123,
+                                 wait=lambda timeout: 0)
         for target, replacement in [
             ("subprocess.Popen", lambda *a, **k: worker),
             ("time.sleep", sleep),
@@ -62,6 +63,14 @@ class TestWorkerStartup(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 self.app._ensure_worker_running()
         self.assertLess(self.elapsed, 1.)
+
+    def test_spawn_is_safe_after_web_threads_start(self):
+        with self.external_dependencies():
+            factory = self.main.subprocess.Popen
+            with patch('main.subprocess.Popen', side_effect=factory) as spawn:
+                self.app._ensure_worker_running()
+        self.assertTrue(spawn.call_args.kwargs.get('start_new_session'))
+        self.assertNotIn('preexec_fn', spawn.call_args.kwargs)
 
     def test_startup_timeout_stops_owned_worker(self):
         with self.external_dependencies(socket_exists_at=999.):

@@ -1,6 +1,7 @@
 """Jinja pages and bounded telemetry, independent of GPU/printer APIs."""
 from contextlib import asynccontextmanager
 from pathlib import Path
+from anyio.to_thread import current_default_thread_limiter
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -21,11 +22,17 @@ def create_app(snapshot_dir, sampler=None):
 
     @asynccontextmanager
     async def lifespan(app):
+        limiter = current_default_thread_limiter()
+        previous_limit = limiter.total_tokens
+        limiter.total_tokens = 4
         try:
             sampler.start()
             yield
         finally:
-            sampler.stop()
+            try:
+                sampler.stop()
+            finally:
+                limiter.total_tokens = previous_limit
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.mount('/static', StaticFiles(directory=str(HERE / 'static')), name='static')

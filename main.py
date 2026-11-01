@@ -50,6 +50,8 @@ class SpaghettiDetectionApp:
 
         self.worker_process = None
         self.running = False
+        self.web_server = None
+        self.video_stream = self.mqtt_controller = self.ipc_client = None
 
     def _load_config(self) -> dict:
         if not os.path.exists(self.config_path):
@@ -111,7 +113,7 @@ class SpaghettiDetectionApp:
             env=env,
             stdout=sys.stdout,
             stderr=sys.stderr,
-            preexec_fn=os.setsid
+            start_new_session=True
         )
 
         # Loading the engine and prewarming JPEG/CUDA/NMS can exceed 60 seconds
@@ -135,6 +137,25 @@ class SpaghettiDetectionApp:
         self.stop()
         raise TimeoutError("Inference worker failed to become ready within 120 seconds.")
 
+    def _start_web(self):
+        web_config = self.config.get("web", {})
+        if not web_config.get("enabled", False):
+            return
+        try:
+            from web.server import EmbeddedWebServer
+            self.web_server = EmbeddedWebServer(
+                snapshot_dir=BASE_DIR / self.config.get("storage", {}).get("snapshots_dir", "snapshots"),
+                host=web_config.get("host", "0.0.0.0"), port=web_config.get("port", 8000))
+            self.web_server.start()
+        except Exception as exc:
+            logger.error("Web UI unavailable; print monitoring continues: %s", exc)
+            server, self.web_server = getattr(self, "web_server", None), None
+            if server is not None:
+                try:
+                    server.stop()
+                except Exception:
+                    logger.exception("Error closing failed web server")
+
     def run(self):
         self.running = True
 
@@ -147,6 +168,13 @@ class SpaghettiDetectionApp:
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
 
+        try:
+            self._start_web()
+            self._run_monitoring()
+        finally:
+            self.stop()
+
+    def _run_monitoring(self):
         # 1. Start GPU Inference Worker
         self._ensure_worker_running()
 
@@ -200,7 +228,7 @@ class SpaghettiDetectionApp:
         )
 
         # 4. Start MQTT Controller
-        mqtt_controller = A1MQTTController(
+        mqtt_controller = self.mqtt_controller = A1MQTTController(
             printer_ip=printer_ip,
             access_code=access_code,
             dev_id=target_serial
@@ -208,11 +236,11 @@ class SpaghettiDetectionApp:
         mqtt_controller.start()
 
         # 5. Connect IPC Inference Client
-        ipc_client = InferenceClient()
+        ipc_client = self.ipc_client = InferenceClient()
         ipc_client.connect()
 
         # 6. Connect Video Stream
-        video_stream = A1VideoStream(
+        video_stream = self.video_stream = A1VideoStream(
             printer_ip=printer_ip,
             access_code=access_code
         )
@@ -290,19 +318,33 @@ class SpaghettiDetectionApp:
                         logger.warning("Dry-Run enabled: Skipping actual printer halt command.")
 
         finally:
-            video_stream.disconnect()
-            mqtt_controller.stop()
-            ipc_client.close()
             self.stop()
 
     def stop(self):
         self.running = False
-        if self.worker_process:
+        for attribute, method in (("video_stream", "disconnect"), ("mqtt_controller", "stop"),
+                                  ("ipc_client", "close"), ("web_server", "stop")):
+            component = getattr(self, attribute, None)
+            setattr(self, attribute, None)
+            if component is not None:
+                try:
+                    getattr(component, method)()
+                except Exception:
+                    logger.exception("Error closing %s", attribute)
+        worker, self.worker_process = self.worker_process, None
+        if worker is not None:
             try:
-                os.killpg(os.getpgid(self.worker_process.pid), signal.SIGTERM)
-            except Exception:
-                pass
-            self.worker_process = None
+                if worker.poll() is None:
+                    os.killpg(os.getpgid(worker.pid), signal.SIGTERM)
+                worker.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(os.getpgid(worker.pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                worker.wait(timeout=1)
+            except ProcessLookupError:
+                worker.wait(timeout=1)
 
 
 def main():

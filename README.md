@@ -108,3 +108,44 @@ The CPU contract/backend regressions use pytest, without connecting to a printer
 ```bash
 python3 -m pytest -q tests/test_model_contract.py tests/test_backend_selection.py
 ```
+
+## Embedded read-only web interface
+
+Install the web dependencies in the controller's Python 3.10 environment:
+
+```bash
+api/.venv/bin/python -m pip install -r web/requirements.txt
+```
+
+Add this section to `config.json` (configurations without it keep the UI disabled):
+
+```json
+"web": {"enabled": true, "host": "0.0.0.0", "port": 8000}
+```
+
+Start the existing controller with `api/.venv/bin/python main.py --config config.json --dry-run`.
+Open `http://<jetson-ip>:8000/photos` or `/jetson` on the LAN. The UI runs in the
+controller process and stops with it; there is no separate web daemon. It has no
+login and only exposes saved photos and hardware metrics, with no inference,
+upload, deletion, configuration or printer-control endpoints.
+
+The gallery reads `storage.snapshots_dir`: 24 newest photos per page, full-size
+annotated images and detection tables from same-name JSON. Boxes already saved
+in the image are not drawn again. Missing metadata does not hide the image.
+Bootstrap and Chart.js assets are bundled with licenses and SHA256 checksums,
+so pages work without internet/CDN access. The layout uses square corners and
+plain Chinese text without decorative icons.
+
+A single owned `tegrastats --interval 2000` child supplies all viewers. History
+is limited to 450 samples and 15 minutes using monotonic time; charts show time
+relative to now. Offline cores are excluded from CPU average; missing fields
+remain null. Six seconds without valid data marks current readings unavailable,
+and failures retry every five seconds. Non-Jetson machines still show the photo
+pages and an unavailable metrics state. No GPU libraries are imported by the UI.
+
+Tests (controller environment plus pytest/httpx2; Node only for frontend tests):
+
+```bash
+python -m pytest -q tests/test_web_gallery.py tests/test_web_telemetry.py tests/test_web_lifecycle.py
+node tests/test_web_chart.cjs
+```
