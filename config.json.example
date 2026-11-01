@@ -15,7 +15,7 @@
     "model_engine": "models/yolov5_failure_416.engine",
     "confidence_threshold": 0.30,
     "consecutive_hits": 6,
-    "target_classes": ["spaghetti", "warping"]
+    "target_classes": ["spaghetti", "warping", "error"]
   },
   "safety": {
     "dry_run": true,

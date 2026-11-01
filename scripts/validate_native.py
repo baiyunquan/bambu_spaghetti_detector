@@ -84,7 +84,7 @@ def decision_trace(detections,threshold):
     from api.decision_engine import DecisionEngine
     logging.getLogger("DecisionEngine").setLevel(100)
     engine=DecisionEngine(consecutive_required=6,confidence_threshold=threshold,
-                          target_classes=["spaghetti","warping"],dry_run=True,cooldown_seconds=0)
+                          target_classes=["spaghetti","warping","error"],dry_run=True,cooldown_seconds=0)
     return [(r["has_failure"],r["consecutive_hits"],r["triggered"])
             for r in [engine.evaluate_frame(detections,"RUNNING") for _ in range(8)]]
 

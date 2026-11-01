@@ -27,7 +27,7 @@ warmup(), close(). TensorRT raw output pointers never round-trip through host.
 ## Gates
 Confidence >= threshold; per-anchor highest class; v5 objectness times class;
 NMS suppresses same class only at IoU > threshold; ties by anchor index.
-Only spaghetti/warping are default failure targets. Same weights and thresholds.
+User amendment: spaghetti/warping/error are failure targets. Same weights and thresholds.
 RGB/preprocessing error <=1/255; boxes <=1px and scores <=1e-3 versus corrected
 reference, same failure and multi-frame decisions on 295 images.
 Steady RSS <=1.5GiB; peak <=1.8GiB; >=800MiB saving against runnable baseline;

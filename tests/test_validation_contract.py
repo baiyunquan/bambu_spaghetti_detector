@@ -29,10 +29,11 @@ class TestValidationContract(unittest.TestCase):
         self.assertFalse(validation.equivalent(want,close)[0])
         self.assertFalse(validation.equivalent(want,[])[0])
 
-    def test_error_label_does_not_enter_default_failure_trace(self):
+    def test_error_label_enters_requested_failure_trace(self):
         error=[dict(label="error",class_id=0,confidence=.99,bbox=[1,2,10,20])]
         trace=validation.decision_trace(error,.35)
-        self.assertTrue(all(row==(False,0,False) for row in trace))
+        self.assertFalse(trace[4][2])
+        self.assertTrue(trace[5][2])
         failure=[dict(label="spaghetti",class_id=3,confidence=.99,bbox=[1,2,10,20])]
         trace=validation.decision_trace(failure,.35)
         self.assertFalse(trace[4][2])

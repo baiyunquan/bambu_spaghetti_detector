@@ -49,7 +49,7 @@ It imports no torch or torchvision and never falls back to the legacy backend
 if initialization, metadata checks, or inference fail. Obico, YOLOv8, and
 YOLOv5 retain their original class IDs. The known YOLOv8 export name
 `Spaghetti - v11 2025-04-15 12-28am` maps to `spaghetti`; other labels remain
-unchanged. Only `spaghetti` and `warping` are default failure targets.
+unchanged. The requested failure targets are `spaghetti`, `warping`, and `error`.
 
 Compile each fixed-shape ONNX engine on the Jetson using its native TensorRT
 FP16 toolchain. Build the CUDA kernel PTX once as a separate preparation step,
