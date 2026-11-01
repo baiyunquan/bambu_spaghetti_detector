@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}打印监控{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='vendor/bootstrap.min.css').path }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css').path }}">
+</head>
+<body>
+<header class="border-bottom">
+  <nav class="container-fluid page-width d-flex align-items-center flex-wrap gap-4 py-3" aria-label="主导航">
+    <span class="site-name">打印监控</span>
+    <a href="/photos" class="nav-item {% if tab == 'photos' %}active{% endif %}" {% if tab == 'photos' %}aria-current="page"{% endif %}>照片记录</a>
+    <a href="/jetson" class="nav-item {% if tab == 'jetson' %}active{% endif %}" {% if tab == 'jetson' %}aria-current="page"{% endif %}>Jetson 监控</a>
+  </nav>
+</header>
+<main class="container-fluid page-width py-4">{% block content %}{% endblock %}</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

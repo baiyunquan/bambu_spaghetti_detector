@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ filename }} · 照片记录{% endblock %}
+{% block content %}
+<a href="/photos" class="d-inline-block mb-3">返回照片记录</a>
+<h1 class="photo-name mb-4">{{ filename }}</h1>
+<div class="image-panel border mb-4"><img class="detail-image" src="{{ url_for('image', filename=filename).path }}" alt="{{ filename }}"></div>
+{% if metadata %}
+<div class="d-flex gap-4 flex-wrap mb-3 text-secondary">
+  <span>记录时间 {{ metadata.timestamp }}</span><span>连续命中 {{ metadata.consecutive_hits }} 帧</span><span>检测 {{ metadata.detections|length }} 项</span>
+</div>
+<div class="table-responsive">
+<table class="table table-bordered align-middle">
+  <thead><tr><th>类别</th><th>类别编号</th><th>置信度</th><th>框坐标 (x1, y1, x2, y2)</th></tr></thead>
+  <tbody>{% for det in metadata.detections %}
+  <tr><td>{{ det.label }}</td><td>{{ det.class_id if det.class_id is not none else '—' }}</td><td>{{ '%.1f%%'|format(det.confidence*100) }}</td><td>{{ det.bbox|join(', ') }}</td></tr>
+  {% else %}<tr><td colspan="4">无检测项</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% else %}<p class="empty-state">检测记录不可用</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}照片记录 · 打印监控{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div><h1>照片记录</h1><p class="text-secondary mb-0">已保存 {{ total }} 张照片</p></div>
+  <a href="/photos?page={{ page }}" class="btn btn-outline-secondary">刷新</a>
+</div>
+{% if error %}<p class="empty-state">{{ error }}</p>
+{% elif not photos %}<p class="empty-state">暂无照片</p>
+{% else %}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
+{% for filename in photos %}
+  <div class="col" data-photo="{{ filename }}">
+    <a href="{{ url_for('detail', filename=filename).path }}" class="photo-card border d-block">
+      <img src="{{ url_for('image', filename=filename).path }}" alt="{{ filename }}" class="photo-preview" loading="lazy" decoding="async" width="320" height="200">
+      <div class="p-3 photo-name">{{ filename }}</div>
+    </a>
+  </div>
+{% endfor %}
+</div>
+{% endif %}
+{% if pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-4" aria-label="照片分页">
+  {% if page > 1 %}<a class="btn btn-outline-secondary" href="/photos?page={{ page-1 }}">上一页</a>{% else %}<span></span>{% endif %}
+  <span class="text-secondary">第 {{ page }} / {{ pages }} 页</span>
+  {% if page < pages %}<a class="btn btn-outline-secondary" href="/photos?page={{ page+1 }}">下一页</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

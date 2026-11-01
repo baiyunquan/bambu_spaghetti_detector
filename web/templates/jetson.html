@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Jetson 监控 · 打印监控{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div><h1>Jetson 监控</h1><p class="text-secondary mb-0">最近 15 分钟，每 2 秒更新</p></div>
+  <span id="metrics-status" role="status" class="text-secondary">正在连接</span>
+</div>
+<div class="row row-cols-2 row-cols-lg-4 g-3 mb-4">
+  <div class="col"><section class="border p-3 metric"><h2>CPU 使用率</h2><div id="cpu-value" class="metric-value">—</div></section></div>
+  <div class="col"><section class="border p-3 metric"><h2>GPU 使用率</h2><div id="gpu-value" class="metric-value">—</div></section></div>
+  <div class="col"><section class="border p-3 metric"><h2>RAM</h2><div id="ram-value" class="metric-value">—</div><div id="swap-value" class="text-secondary small">SWAP —</div></section></div>
+  <div class="col"><section class="border p-3 metric"><h2>CPU / GPU 温度</h2><div id="temperature-value" class="metric-value">—</div></section></div>
+</div>
+<section class="border p-3 mb-4"><h2>负载</h2><div class="chart-wrap"><canvas id="load-chart" role="img" aria-label="CPU、GPU、RAM 使用率曲线"></canvas></div></section>
+<section class="border p-3"><h2>温度</h2><div class="chart-wrap"><canvas id="temperature-chart" role="img" aria-label="Jetson 传感器温度曲线"></canvas></div></section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='vendor/chart.umd.min.js').path }}" defer></script>
+<script src="{{ url_for('static', path='jetson.js').path }}" defer></script>
+{% endblock %}
