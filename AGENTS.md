@@ -111,6 +111,8 @@ The Bambu Lab A1 camera produces ~0.5 to 2 FPS (1280x720 JPEG frames):
 
 ## 6. Development Workflow, Git Discipline & Autonomous Execution
 
+User workflow preference: work directly on `main`. Do not create worktrees or feature branches unless the user explicitly requests them.
+
 1. **Prompt, Atomic Git Commits**:
    - Commit code changes promptly and incrementally in small, self-contained, atomic units as each feature, fix, or test is verified.
    - Strictly avoid lumping unrelated changes, multi-module refactors, or modifications originating from different agents/tools into a single ambiguous batch commit.
