@@ -74,6 +74,6 @@ class PhotoStore:
                              'class_id': detection.get('class_id')})
             # Only these evidence fields enter the page; never serve arbitrary JSON.
             metadata = {'timestamp': value['timestamp'], 'consecutive_hits': hits, 'detections': rows}
-        except (OSError, ValueError, UnicodeError, RecursionError):
+        except (OSError, ValueError, UnicodeError, RecursionError, OverflowError):
             pass
         return {'filename': filename, 'metadata': metadata}

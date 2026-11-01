@@ -100,3 +100,17 @@ def test_paths_and_external_symlinks_are_not_served(tmp_path):
         assert 'escape.jpg' not in browser.get('/photos').text
         assert '检测记录不可用' in browser.get('/photos/'+normal.name).text
         assert browser.post('/api/jetson').status_code==405
+
+
+@pytest.mark.parametrize('field',['confidence','bbox'])
+def test_overflowing_numeric_record_keeps_detail_and_image_readable(tmp_path,field):
+    path=photo(tmp_path)
+    record=json.loads(path.with_suffix('.json').read_text())
+    record['detections'][0][field]=10**400 if field=='confidence' else [10**400,2,30,35]
+    path.with_suffix('.json').write_text(json.dumps(record))
+    from web.app import create_app
+    with TestClient(create_app(tmp_path,sampler=Sampler()),raise_server_exceptions=False) as browser:
+        response=browser.get('/photos/'+path.name)
+        assert response.status_code==200
+        assert '检测记录不可用' in response.text
+        assert browser.get('/media/'+path.name).status_code==200
