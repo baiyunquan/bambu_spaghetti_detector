@@ -83,17 +83,20 @@ class FrameRecorder:
         ticket = self.requests.claim(time.monotonic() if frame_received_at is None else frame_received_at)
         if state != 'RUNNING' and ticket is None:
             return None
+        task_name = printer_info.get("subtask_name") if (state in ('RUNNING', 'PAUSE') and printer_info) else "default"
         try:
             path = Path(self.snapshots.save_frame(
                 jpeg_bytes=jpeg_bytes, detections=detections, consecutive_hits=consecutive_hits,
                 printer_info=dict(printer_info, gcode_state=state),
                 capture_kind='print' if state == 'RUNNING' else 'manual',
-                manual_requested=ticket is not None, inference_error=inference_error))
+                manual_requested=ticket is not None, inference_error=inference_error,
+                task_name=task_name))
         except Exception as exc:
             logger.exception('Could not save camera frame')
             if ticket is not None:
                 self.requests.complete(ticket, error=OSError('照片保存失败，请检查磁盘空间和目录权限'))
             return None
         if ticket is not None:
+            ticket['task'] = path.parent.name
             self.requests.complete(ticket, filename=path.name)
         return path
