@@ -119,3 +119,12 @@ User workflow preference: work directly on `main`. Do not create worktrees or fe
 2. **Autonomous Execution & Decisive Proactivity**:
    - Act decisively and execute necessary operations (e.g., building engines, running tests, committing code, switching configurations, downloading datasets) proactively without constantly pausing to ask the user for routine permission or confirmation.
    - When a clear technical path or instruction is given, execute the full cycle end-to-end and report concrete results directly.
+
+---
+
+## 7. Web UI & Frontend Code Specifications
+
+1. **No Emoji Characters**:
+   - Strictly prohibit adding emoji characters (e.g., 🍝, 🟢, 🔴, ⚠️, ✅, ❌) to Web UI templates (HTML/CSS) or frontend logic. Maintain a clean, professional, and rigorous technical interface style.
+2. **Separation of JavaScript**:
+   - Strictly prohibit embedding inline `<script>` logic within HTML templates. All client-side JavaScript must be separated into dedicated standalone `.js` files under `web/static/` and referenced via `<script src="...">`.
