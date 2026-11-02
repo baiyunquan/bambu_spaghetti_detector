@@ -288,33 +288,48 @@ class SpaghettiDetectionApp:
                                 "progress": getattr(mqtt_controller, "progress_percent", 0),
                                 "subtask_name": getattr(mqtt_controller, "subtask_name", "default")}
 
-                # Send frame to GPU TensorRT Worker
-                t0 = time.time()
-                try:
-                    detections = ipc_client.detect(jpeg_frame)
-                except Exception as e:
-                    logger.error(f"Inference error: {e}")
-                    decision_engine.invalidate_frame()
-                    frame_recorder.record(jpeg_frame, [], 0, current_state, printer_info,
-                                          inference_error=str(e), frame_received_at=frame_received_at)
-                    continue
-                dt_ms = (time.time() - t0) * 1000.0
+                # State Gating: Only invoke GPU TensorRT inference when the printer is actively printing (RUNNING).
+                # When in non-printing states (IDLE, PAUSE, FINISH, etc.), completely bypass GPU to keep GPU load at 0%.
+                if current_state == "RUNNING":
+                    # Send frame to GPU TensorRT Worker
+                    t0 = time.time()
+                    try:
+                        detections = ipc_client.detect(jpeg_frame)
+                    except Exception as e:
+                        logger.error(f"Inference error: {e}")
+                        decision_engine.invalidate_frame()
+                        frame_recorder.record(jpeg_frame, [], 0, current_state, printer_info,
+                                              inference_error=str(e), frame_received_at=frame_received_at)
+                        continue
+                    dt_ms = (time.time() - t0) * 1000.0
 
-                # Decision state machine evaluation
-                eval_res = decision_engine.evaluate_frame(detections, current_state)
-                frame_recorder.record(jpeg_frame, detections, eval_res["consecutive_hits"],
-                                      current_state, printer_info, frame_received_at=frame_received_at)
+                    # Decision state machine evaluation
+                    eval_res = decision_engine.evaluate_frame(detections, current_state)
+                    frame_recorder.record(jpeg_frame, detections, eval_res["consecutive_hits"],
+                                          current_state, printer_info, frame_received_at=frame_received_at)
 
-                # Console telemetry line
-                hits = eval_res["consecutive_hits"]
-                req = decision_engine.consecutive_required
-                conf = eval_res["highest_confidence"]
-                status_symbol = "🔴" if hits > 0 else "🟢"
-                print(
-                    f"\r{status_symbol} [Frame #{frame_idx}] [{dt_ms:.1f}ms] [STATE: {current_state}] [Hits: {hits}/{req}] [Max Conf: {conf:.2f}] [Dets: {len(detections)}]   ",
-                    end="",
-                    flush=True
-                )
+                    # Console telemetry line
+                    hits = eval_res["consecutive_hits"]
+                    req = decision_engine.consecutive_required
+                    conf = eval_res["highest_confidence"]
+                    status_symbol = "🔴" if hits > 0 else "🟢"
+                    print(
+                        f"\r{status_symbol} [Frame #{frame_idx}] [{dt_ms:.1f}ms] [STATE: {current_state}] [Hits: {hits}/{req}] [Max Conf: {conf:.2f}] [Dets: {len(detections)}]   ",
+                        end="",
+                        flush=True
+                    )
+                else:
+                    # Standby mode: bypass GPU inference entirely
+                    detections = []
+                    eval_res = decision_engine.evaluate_frame(detections, current_state)
+                    frame_recorder.record(jpeg_frame, detections, 0,
+                                          current_state, printer_info, frame_received_at=frame_received_at)
+                    req = decision_engine.consecutive_required
+                    print(
+                        f"\r🟢 [Frame #{frame_idx}] [STANDBY] [STATE: {current_state}] [Hits: 0/{req}] (GPU Idle)   ",
+                        end="",
+                        flush=True
+                    )
 
                 # Handle confirmed failure
                 if eval_res["triggered"]:
