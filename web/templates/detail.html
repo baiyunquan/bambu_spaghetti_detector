@@ -1,12 +1,22 @@
 {% extends 'base.html' %}
 {% block title %}{{ filename }} · 照片记录{% endblock %}
 {% block content %}
-<a href="/photos" class="d-inline-block mb-3">返回照片记录</a>
-<h1 class="photo-name mb-4">{{ filename }}</h1>
-<div class="image-panel border mb-4"><img class="detail-image" src="{{ url_for('image', filename=filename).path }}" alt="{{ filename }}"></div>
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="/photos">照片记录</a></li>
+    <li class="breadcrumb-item"><a href="/photos?task={{ task }}">{{ '默认分类' if task == 'default' else task }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ filename }}</li>
+  </ol>
+</nav>
+
+<h1 class="photo-name mb-3">{{ filename }}</h1>
+<div class="image-panel border mb-4"><img class="detail-image" src="/media/{{ task }}/{{ filename }}" alt="{{ filename }}"></div>
 {% if metadata %}
 <div class="d-flex gap-4 flex-wrap mb-3 text-secondary">
-  <span>记录时间 {{ metadata.timestamp }}</span><span>连续命中 {{ metadata.consecutive_hits }} 帧</span><span>检测 {{ metadata.detections|length }} 项</span>
+  <span>记录时间 {{ metadata.timestamp }}</span>
+  <span>分类: <strong>{{ '默认 (未在任务中)' if metadata.task_name == 'default' else metadata.task_name }}</strong></span>
+  <span>连续命中 {{ metadata.consecutive_hits }} 帧</span>
+  <span>检测 {{ metadata.detections|length }} 项</span>
   {% if metadata.capture_kind %}<span>{{ {'print':'打印记录','manual':'手动拍摄','failure':'故障证据'}[metadata.capture_kind] }}{% if metadata.manual_requested and metadata.capture_kind != 'manual' %} · 手动拍摄{% endif %}</span>{% endif %}
 </div>
 {% if metadata.inference_error %}<p role="status" class="text-danger">推理失败，本张照片没有有效检测结果</p>{% else %}

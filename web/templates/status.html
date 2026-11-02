@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}打印机状态 · 打印监控{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <h1 class="h2 mb-0">打印机状态</h1>
+      <span id="printer-status-badge" class="badge bg-secondary">检查连接中...</span>
+      <span id="printer-uptime-badge" class="badge bg-light text-dark border">在线: --</span>
+    </div>
+    <p id="printer-ip-serial" class="text-secondary small mb-0">设备: 拓竹 A1 | IP: -- | SN: --</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button id="capture-button" type="button" class="btn btn-outline-primary">拍一张</button>
+    <a href="/login" class="btn btn-outline-secondary">连接配置</a>
+  </div>
+</div>
+
+<p id="capture-status" role="status" aria-live="polite" class="text-secondary"></p>
+
+<div id="offline-alert" class="alert alert-warning d-none" role="alert">
+  <div class="d-flex align-items-center gap-2">
+    <span class="fs-4">⚠️</span>
+    <div>
+      <strong>打印机未连接或已离线</strong>
+      <p class="mb-0 small text-secondary">请检查打印机电源与 Wi-Fi 连接，或前往 <a href="/login" class="alert-link">设备连接设置</a> 重新输入或同步 Access Code 与 IP。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Main Print Job Status -->
+<div class="card shadow-sm mb-4 border">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+        <span class="text-uppercase tracking-wider small text-secondary fw-semibold">当前打印任务</span>
+        <h3 id="task-name" class="fw-bold mb-0 text-dark">--</h3>
+        <p id="gcode-file" class="text-muted small mb-0 font-monospace">--</p>
+      </div>
+      <div class="text-end">
+        <span id="progress-percent" class="display-6 fw-bold text-primary">0%</span>
+      </div>
+    </div>
+
+    <div class="progress mb-3" style="height: 14px; background-color: #e9ecef;">
+      <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+           role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 g-3 text-secondary small pt-2 border-top">
+      <div>
+        <div class="text-muted">当前层数</div>
+        <div class="fw-bold fs-6 text-dark"><span id="current-layer">0</span> / <span id="total-layers">0</span></div>
+      </div>
+      <div>
+        <div class="text-muted">预估剩余时间</div>
+        <div class="fw-bold fs-6 text-dark" id="remaining-time">--</div>
+      </div>
+      <div>
+        <div class="text-muted">打印阶段</div>
+        <div class="fw-bold fs-6 text-dark" id="print-stage">--</div>
+      </div>
+      <div>
+        <div class="text-muted">速度模式</div>
+        <div class="fw-bold fs-6 text-dark" id="print-speed">标准 (100%)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Telemetry Grid -->
+<div class="row g-3 mb-4">
+  <!-- Temperatures -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card shadow-sm h-100 border">
+      <div class="card-body">
+        <div class="text-secondary small fw-semibold text-uppercase mb-2">🔥 喷嘴温度</div>
+        <div class="d-flex align-items-baseline gap-2 mb-1">
+          <span id="temp-nozzle" class="fs-2 fw-bold text-dark">0.0</span>
+          <span class="text-secondary fs-6">/ <span id="target-nozzle">0.0</span> ℃</span>
+        </div>
+        <div class="small text-secondary" id="nozzle-state-hint">目标设定: 0.0℃</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card shadow-sm h-100 border">
+      <div class="card-body">
+        <div class="text-secondary small fw-semibold text-uppercase mb-2">🛏️ 热床温度</div>
+        <div class="d-flex align-items-baseline gap-2 mb-1">
+          <span id="temp-bed" class="fs-2 fw-bold text-dark">0.0</span>
+          <span class="text-secondary fs-6">/ <span id="target-bed">0.0</span> ℃</span>
+        </div>
+        <div class="small text-secondary" id="bed-state-hint">目标设定: 0.0℃</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cooling Fan -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card shadow-sm h-100 border">
+      <div class="card-body">
+        <div class="text-secondary small fw-semibold text-uppercase mb-2">💨 冷却风扇</div>
+        <div class="d-flex align-items-baseline gap-2 mb-1">
+          <span id="fan-cooling" class="fs-2 fw-bold text-dark">0</span>
+          <span class="text-secondary fs-6">%</span>
+        </div>
+        <div class="small text-secondary">喉管风扇: <span id="fan-heatbreak">0</span>%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filament / Tray -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card shadow-sm h-100 border">
+      <div class="card-body">
+        <div class="text-secondary small fw-semibold text-uppercase mb-2">🧵 当前耗材</div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span id="tray-color-dot" style="display:inline-block;width:18px;height:18px;border-radius:50%;background-color:#10b981;border:1px solid #ccc;"></span>
+          <span id="tray-material" class="fs-5 fw-bold text-dark">PLA</span>
+        </div>
+        <div class="small text-secondary" id="tray-info">剩余约 <span id="tray-remain">100</span>% · <span id="tray-name">外部料槽</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hardware & Diagnostics Footer -->
+<div class="card bg-light border-0 py-2 px-3 small text-secondary d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <span>Wi-Fi 信号: <strong id="wifi-signal" class="text-dark">--</strong></span>
+    <span class="mx-2">|</span>
+    <span>存储卡: <strong id="sdcard-status" class="text-dark">--</strong></span>
+  </div>
+  <div>
+    <span>上次遥测更新: <span id="last-update-time">--</span></span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='capture.js').path }}" defer></script>
+<script src="{{ url_for('static', path='status.js').path }}" defer></script>
+{% endblock %}

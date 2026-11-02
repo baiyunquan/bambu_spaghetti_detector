@@ -101,7 +101,7 @@ def test_snapshot_manager_task_subdirectories(tmp_path):
         capture_kind="manual"
     ))
     assert path2.exists()
-    assert path2.parent.name == "default"
+    assert path2.parent == root
 
 
 def test_directory_traversal_rejection(tmp_path):

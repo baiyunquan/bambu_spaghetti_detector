@@ -41,7 +41,21 @@ class BambuAuth:
             logger.warning(f"Failed to save token to file: {e}")
 
     def login(self, username: str, password: str) -> str:
-        """Authenticates with Bambu Cloud and caches token."""
+        """CLI synchronous login helper (caches token)."""
+        res = self.login_step1(username, password)
+        if res.get("status") == "success":
+            return res["token"]
+        if res.get("status") == "2fa_required":
+            logger.warning("Bambu Cloud requested 2FA verification.")
+            code = input("Enter verification code: ").strip()
+            v_res = self.login_step2(username, code)
+            if v_res.get("status") == "success":
+                return v_res["token"]
+            raise RuntimeError(v_res.get("message", "2FA verification failed"))
+        raise RuntimeError(res.get("message", "Login failed"))
+
+    def login_step1(self, username: str, password: str) -> Dict[str, Any]:
+        """Non-blocking Step 1: authenticate or trigger email 2FA."""
         url = f"{self.base_url}/v1/user-service/user/login"
         headers = {
             "Content-Type": "application/json",
@@ -52,33 +66,50 @@ class BambuAuth:
             "password": password,
             "apiError": ""
         }
-
-        logger.info(f"Connecting to Bambu Cloud ({self.region})...")
-        resp = requests.post(url, json=payload, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            data = resp.json()
+        except Exception as e:
+            return {"status": "error", "message": f"连接拓竹云端超时或网络错误: {e}"}
 
         token = data.get("accessToken")
         if token or data.get("success"):
             self._save_token(token)
-            logger.info("Authentication successful!")
-            return token
+            return {"status": "success", "token": token}
 
         if data.get("loginType") == "verifyCode":
-            logger.warning("Bambu Cloud requested 2FA verification.")
-            requests.post(f"{self.base_url}/v1/user-service/user/sendemail", json={"email": username, "type": "login"}, headers=headers)
-            code = input("Enter verification code: ").strip()
-            v_payload = {"account": username, "code": code}
-            v_resp = requests.post(url, json=v_payload, headers=headers, timeout=15)
-            v_data = v_resp.json()
-            v_token = v_data.get("accessToken")
-            if v_token or v_data.get("success"):
-                self._save_token(v_token)
-                logger.info("2FA Verification successful!")
-                return v_token
-            raise RuntimeError(f"2FA verification failed: {v_data}")
+            try:
+                requests.post(f"{self.base_url}/v1/user-service/user/sendemail",
+                              json={"email": username, "type": "login"}, headers=headers, timeout=10)
+            except Exception:
+                pass
+            return {"status": "2fa_required", "message": "已向您的账号邮箱发送两步验证码，请输入以完成登录"}
 
-        raise RuntimeError(f"Login failed: {data.get('message', data)}")
+        return {"status": "error", "message": data.get("message", f"登录失败: {data}")}
+
+    def login_step2(self, username: str, code: str) -> Dict[str, Any]:
+        """Non-blocking Step 2: verify 2FA code and obtain token."""
+        url = f"{self.base_url}/v1/user-service/user/login"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "BambuStudio/01.09.03.50",
+        }
+        payload = {
+            "account": username,
+            "code": code.strip(),
+        }
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            data = resp.json()
+        except Exception as e:
+            return {"status": "error", "message": f"验证请求异常: {e}"}
+
+        token = data.get("accessToken")
+        if token or data.get("success"):
+            self._save_token(token)
+            return {"status": "success", "token": token}
+
+        return {"status": "error", "message": data.get("message", "两步验证码无效或已过期")}
 
     def get_a1_credentials(self, target_serial: str = None) -> Dict[str, Any]:
         """
@@ -136,3 +167,36 @@ class BambuAuth:
             "online": selected_device.get("online", False),
             "model": selected_device.get("dev_product_name") or selected_device.get("dev_model_name", "A1")
         }
+
+
+def test_lan_connectivity(ip: str, port: int = 8883, timeout: float = 3.0) -> bool:
+    """Tests raw TCP connection to printer port (e.g. 8883 MQTT)."""
+    import socket
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def update_config_printer(config_path: str, ip: str, access_code: str, target_serial: str) -> bool:
+    """Updates printer credentials in config.json with strict serial prefix validation."""
+    if not target_serial or not target_serial.startswith("039"):
+        raise ValueError(f"安全约束拦截：仅允许连接拓竹 A1 打印机（序列号前缀必须为 039）。当前输入：{target_serial}")
+
+    cfg = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            cfg = {}
+    cfg.setdefault("printer", {})
+    cfg["printer"]["printer_ip"] = ip.strip()
+    cfg["printer"]["access_code"] = access_code.strip()
+    cfg["printer"]["target_serial"] = target_serial.strip()
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    return True
+

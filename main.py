@@ -139,6 +139,18 @@ class SpaghettiDetectionApp:
         self.stop()
         raise TimeoutError("Inference worker failed to become ready within 120 seconds.")
 
+    def _handle_reconnect(self, ip: str, access_code: str, serial: str):
+        logger.info(f"Hot-reconnecting printer to {ip} (SN: {serial})...")
+        if self.mqtt_controller is not None:
+            try:
+                self.mqtt_controller.stop()
+            except Exception:
+                pass
+        self.mqtt_controller = A1MQTTController(
+            printer_ip=ip, access_code=access_code, dev_id=serial
+        )
+        self.mqtt_controller.start()
+
     def _start_web(self):
         web_config = self.config.get("web", {})
         if not web_config.get("enabled", False):
@@ -148,7 +160,10 @@ class SpaghettiDetectionApp:
             self.web_server = EmbeddedWebServer(
                 snapshot_dir=BASE_DIR / self.config.get("storage", {}).get("snapshots_dir", "snapshots"),
                 host=web_config.get("host", "0.0.0.0"), port=web_config.get("port", 8000),
-                capture=self.capture_requests)
+                capture=self.capture_requests,
+                mqtt_controller=lambda: self.mqtt_controller,
+                config_path=str(self.config_path),
+                on_reconnect=self._handle_reconnect)
             self.web_server.start()
         except Exception as exc:
             logger.error("Web UI unavailable; print monitoring continues: %s", exc)
@@ -269,8 +284,9 @@ class SpaghettiDetectionApp:
                 frame_received_at = time.monotonic()
                 current_state = mqtt_controller.gcode_state
                 printer_info = {"serial": target_serial, "ip": printer_ip,
-                                "layer": mqtt_controller.current_layer,
-                                "progress": mqtt_controller.progress_percent}
+                                "layer": getattr(mqtt_controller, "current_layer", 0),
+                                "progress": getattr(mqtt_controller, "progress_percent", 0),
+                                "subtask_name": getattr(mqtt_controller, "subtask_name", "default")}
 
                 # Send frame to GPU TensorRT Worker
                 t0 = time.time()

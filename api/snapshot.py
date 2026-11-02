@@ -64,9 +64,16 @@ class SnapshotManager:
         """Publish one annotated JPEG and sidecar into task-categorized subdirectory."""
         if inference_error is not None:
             inference_error = str(inference_error) or 'Inference failed'
-        category = self.sanitize_task_name(task_name or (printer_info.get("subtask_name") if printer_info else None))
-        target_dir = self.output_dir / category
-        target_dir.mkdir(parents=True, exist_ok=True)
+        raw_task = task_name or (printer_info.get("subtask_name") if printer_info else None)
+        sanitized = self.sanitize_task_name(raw_task) if raw_task else None
+
+        if sanitized and sanitized != "default":
+            category = sanitized
+            target_dir = self.output_dir / category
+            target_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            category = "default"
+            target_dir = self.output_dir
 
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         stem = '{}_{}_{}'.format(capture_kind, timestamp_str, uuid4().hex[:8])

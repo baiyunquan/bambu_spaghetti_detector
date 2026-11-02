@@ -1,31 +1,52 @@
 {% extends 'base.html' %}
 {% block title %}照片记录 · 打印监控{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-  <div><h1>照片记录</h1><p class="text-secondary mb-0">已保存 {{ total }} 张照片</p></div>
-  <div class="d-flex gap-2"><button id="capture-button" type="button" class="btn btn-outline-primary">拍一张</button><a href="/photos?page={{ page }}" class="btn btn-outline-secondary">刷新</a></div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+  <div>
+    <h1 class="h2 mb-1">照片记录</h1>
+    <p class="text-secondary mb-0">分类「{{ '默认分类 (未关联任务)' if task == 'default' else task }}」共 {{ total }} 张照片</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button id="capture-button" type="button" class="btn btn-outline-primary">拍一张</button>
+    <a href="/photos?task={{ task }}&page={{ page }}" class="btn btn-outline-secondary">刷新</a>
+  </div>
 </div>
+
 <p id="capture-status" role="status" aria-live="polite" class="text-secondary"></p>
+
+<!-- Task Categories Tabs -->
+<div class="d-flex align-items-center gap-2 overflow-auto pb-2 mb-4 border-bottom">
+  <span class="text-secondary small fw-semibold text-nowrap">任务分类:</span>
+  {% for t in tasks %}
+    <a href="/photos?task={{ t.name }}" class="badge rounded-pill text-decoration-none px-3 py-2 fs-6 {% if task == t.name %}bg-primary text-white{% else %}bg-light text-secondary border{% endif %}">
+      {{ '默认 (未在任务中)' if t.name == 'default' else t.name }}
+      <span class="ms-1 opacity-75">({{ t.count }})</span>
+    </a>
+  {% endfor %}
+</div>
+
 {% if error %}<p class="empty-state">{{ error }}</p>
-{% elif not photos %}<p class="empty-state">暂无照片</p>
+{% elif not photos %}<p class="empty-state">该分类下暂无照片</p>
 {% else %}
 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
 {% for filename in photos %}
   <div class="col" data-photo="{{ filename }}">
-    <a href="{{ url_for('detail', filename=filename).path }}" class="photo-card border d-block">
-      <img src="{{ url_for('image', filename=filename).path }}" alt="{{ filename }}" class="photo-preview" loading="lazy" decoding="async" width="320" height="200">
+    <a href="/photos/{{ task }}/{{ filename }}" class="photo-card border d-block">
+      <img src="/media/{{ task }}/{{ filename }}" alt="{{ filename }}" class="photo-preview" loading="lazy" decoding="async" width="320" height="200">
       <div class="p-3 photo-name">{{ filename }}</div>
     </a>
   </div>
 {% endfor %}
 </div>
 {% endif %}
+
 {% if pages > 1 %}
 <nav class="d-flex justify-content-between align-items-center mt-4" aria-label="照片分页">
-  {% if page > 1 %}<a class="btn btn-outline-secondary" href="/photos?page={{ page-1 }}">上一页</a>{% else %}<span></span>{% endif %}
+  {% if page > 1 %}<a class="btn btn-outline-secondary" href="/photos?task={{ task }}&page={{ page-1 }}">上一页</a>{% else %}<span></span>{% endif %}
   <span class="text-secondary">第 {{ page }} / {{ pages }} 页</span>
-  {% if page < pages %}<a class="btn btn-outline-secondary" href="/photos?page={{ page+1 }}">下一页</a>{% else %}<span></span>{% endif %}
+  {% if page < pages %}<a class="btn btn-outline-secondary" href="/photos?task={{ task }}&page={{ page+1 }}">下一页</a>{% else %}<span></span>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', path='capture.js').path }}" defer></script>{% endblock %}
+
