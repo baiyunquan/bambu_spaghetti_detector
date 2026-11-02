@@ -184,7 +184,7 @@ class SpaghettiDetectionApp:
         # 2. Authenticate and resolve credentials
         printer_cfg = self.config.get("printer", {})
         target_serial = printer_cfg.get("target_serial", "03900D6A1521014")
-        printer_ip = printer_cfg.get("printer_ip", "192.168.3.231")
+        printer_ip = printer_cfg.get("printer_ip", "192.168.199.231")
         access_code = printer_cfg.get("access_code", "")
 
         cloud_cfg = self.config.get("bambu_cloud", {})

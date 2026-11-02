@@ -6,7 +6,7 @@
   },
   "printer": {
     "target_serial": "03900D6A1521014",
-    "printer_ip": "192.168.3.231",
+    "printer_ip": "192.168.199.231",
     "access_code": ""
   },
   "detection": {
